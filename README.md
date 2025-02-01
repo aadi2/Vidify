@@ -5,4 +5,4 @@ Vidify will be a Chrome Extension, easily installed and instantaneously deployab
 
 
 
-We're so back
+We're so back.
