@@ -13,3 +13,4 @@ models/*.h5
 models/*.pt
 
 .env
+build/
