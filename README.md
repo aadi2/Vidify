@@ -12,4 +12,10 @@ git clone https://github.com/WongKinYiu/yolov9
 cd yolov9
 pip install -r requirements.txt
 
+To run a test development build in a virtual environment (Windows):
+python -m venv venv
+.\venv\Scripts\Activate
+python build.py
+deactivate
+
 We're so back.
