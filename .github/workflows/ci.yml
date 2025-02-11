@@ -22,13 +22,15 @@ jobs:
 
       - name: Run linter
         run: |
+          source venv/bin/activate
           flake8 src/
 
       - name: Run tests with coverage
         run: |
+          source venv/bin/activate
           pytest --cov=src
 
       - name: Run build.py
         run: |
+          source venv/bin/activate
           python src/build.py
-        
