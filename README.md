@@ -25,6 +25,4 @@ source venv/bin/activate
 python src/build.py
 deactivate
 
-To run a 
-
 We're so back.
