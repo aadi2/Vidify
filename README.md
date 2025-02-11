@@ -18,4 +18,6 @@ python -m venv venv
 python build.py
 deactivate
 
+To run a 
+
 We're so back.

@@ -5,14 +5,14 @@ import shutil
 import time
 
 def backend():
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "backend/requirements.txt"])
-    p = subprocess.Popen([sys.executable, "backend/app.py"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "src/backend/requirements.txt"])
+    p = subprocess.Popen([sys.executable, "src/backend/app.py"])
     time.sleep(10)
     p.terminate()
     p.wait()
 
 def frontend():
-    frontend = 'extension/'
+    frontend = 'src/extension/'
     output = '../build/extension/'
 
     if os.path.exists(output):
