@@ -1,0 +1,40 @@
+name: CI Pipeline
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r src/backend/requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run linter
+        run: |
+          source venv/bin/activate
+          flake8 src/
+
+      - name: Set PYTHONPATH
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+        
+      - name: Run tests with coverage
+        run: |
+          source venv/bin/activate
+          pytest --cov=src
+
+      - name: Run build.py
+        run: |
+          source venv/bin/activate
+          python src/build.py
