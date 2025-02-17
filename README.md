@@ -18,6 +18,11 @@ python -m venv venv
 python build.py
 deactivate
 
-To run a 
+
+To run a test development build in a virtual environment (Mac):
+python -m venv venv
+source venv/bin/activate
+python src/build.py
+deactivate
 
 We're so back.
