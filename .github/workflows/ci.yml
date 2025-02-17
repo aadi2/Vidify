@@ -3,7 +3,11 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -13,28 +17,64 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
+      - name: Install dependencies (Linux & macOS)
+        if: runner.os != 'Windows'
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install -r src/backend/requirements.txt
           pip install -r requirements-dev.txt
 
-      - name: Run linter
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m venv venv
+          venv\Scripts\activate
+          pip install -r src/backend/requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run linter (Linux & macOS)
+        if: runner.os != 'Windows'
         run: |
           source venv/bin/activate
           flake8 src/
 
-      - name: Set PYTHONPATH
+      - name: Run linter (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          venv\Scripts\activate
+          flake8 src/
+
+      - name: Set PYTHONPATH (Linux & macOS)
+        if: runner.os != 'Windows'
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
-        
-      - name: Run tests with coverage
+
+      - name: Set PYTHONPATH (Windows)
+        if: runner.os == 'Windows'
+        run: |
+           $env:PYTHONPATH += ";$pwd"
+
+      - name: Run tests with coverage (Linux & macOS)
+        if: runner.os != 'Windows'
         run: |
           source venv/bin/activate
           pytest --cov=src
 
-      - name: Run build.py
+      - name: Run tests with coverage (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          venv\Scripts\activate
+          pytest --cov=src
+
+      - name: Run build.py (Linux & macOS)
+        if: runner.os != 'Windows'
         run: |
           source venv/bin/activate
+          python src/build.py
+
+      - name: Run build.py (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          venv\Scripts\activate
           python src/build.py
