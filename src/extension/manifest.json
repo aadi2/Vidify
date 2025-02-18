@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Vidify",
     "version": "1.0",
-    "description": "Extension allows the user to search up objects in a YouTub video.",
+    "description": "Extension allows the user to search up objects in a YouTube video.",
     "icons": {
       
     },
