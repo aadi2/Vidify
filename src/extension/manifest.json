@@ -1,13 +1,32 @@
 {
-    "manifest_version": 3,
-    "name": "Vidify",
-    "version": "1.0",
-    "description": "Extension allows the user to search up objects in a YouTube video.",
-    "icons": {
-      
-    },
-    "side_panel": {
-      "default_path": "content/components/search.html"
-    },
-    "permissions": ["sidePanel"]
+  "manifest_version": 3,
+  "name": "Vidify",
+  "version": "1.0",
+  "description": "Extension allows the user to search for objects and timestamps in a YouTube video.",
+  "icons": {},
+  "side_panel": {
+    "default_path": "content/components/search.html"
+  },
+  "permissions": [
+    "sidePanel",
+    "scripting",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content/content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "content/components/search.html",
+    "default_icon": {}
   }
+}
