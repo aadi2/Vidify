@@ -4,6 +4,7 @@ import json
 import yt_dlp
 import requests
 
+
 def create_app():
     app = Flask(__name__)
 
@@ -26,7 +27,7 @@ def create_app():
 
             return jsonify(result), 404
         else:
-            print("Transcript: ",transcript)
+            print("Transcript: ", transcript)
             result = {"message": "Video and transcript download successfully."}
 
             return jsonify(result), 200
@@ -35,7 +36,6 @@ def create_app():
     def health_check():
         return jsonify({"status": "OK"}), 200
     
-
     """Downloads the raw YouTube video.
 
     Args:
@@ -47,7 +47,7 @@ def create_app():
     def get_video(url):
         output_dir = "temp/video"
         os.makedirs(output_dir, exist_ok=True)
-        output_path='temp/video/%(title)s.%(ext)s'
+        output_path = 'temp/video/%(title)s.%(ext)s'
         ydl_opts = {
             "outtmpl": output_path,
             "format": "worst",
@@ -70,7 +70,6 @@ def create_app():
             print("Download failed")
             return None
 
-
     """Fetches the transcript for a YouTube video.
 
     Args:
@@ -80,7 +79,7 @@ def create_app():
     Returns:
         Optional[str]: The transcript text if available, else None.
     """
-    def get_transcript(url, lang = "en"):
+    def get_transcript(url, lang="en"):
         os.makedirs("temp/subtitles", exist_ok=True)
 
         ydl_opts = {
@@ -124,10 +123,8 @@ def create_app():
         except Exception as e:
             print("Failed to fetch transcript")
             return None
-
-            
+    
     return app
-
 
 if __name__ == "__main__":
     if not os.path.exists("temp"):
