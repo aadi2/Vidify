@@ -1,17 +1,138 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import os
+import json
+import yt_dlp
+import requests
 
-app = Flask(__name__)
+def create_app():
+    app = Flask(__name__)
+
+    @app.route("/", methods=["GET"])
+    def home():
+        yt_url = request.args.get("hash_id")
+        # TODO: validate url with regex for security
+        # TODO: authentication
+        filename = get_video(yt_url)
+        transcript = get_transcript(yt_url)
+        # TODO: Object recogniton in the video (videoUtils.py)
+        # TODO: Transcript search (transcriptUtils.py)
+
+        if not filename:
+            result = {"message": "Not able to download the video."}
+
+            return jsonify(result), 404
+        elif not transcript:
+            result = {"message": "Not able to fetch transcript."}
+
+            return jsonify(result), 404
+        else:
+            print("Transcript: ",transcript)
+            result = {"message": "Video and transcript download successfully."}
+
+            return jsonify(result), 200
+        
+    @app.route("/health", methods=["GET"])
+    def health_check():
+        return jsonify({"status": "OK"}), 200
+    
+
+    """Downloads the raw YouTube video.
+
+    Args:
+        url (str): The YouTube video URL.
+
+    Returns:
+        Optional[str]: The file name in which the video is stored if available, else None.
+    """
+    def get_video(url):
+        output_dir = "temp/video"
+        os.makedirs(output_dir, exist_ok=True)
+        output_path='temp/video/%(title)s.%(ext)s'
+        ydl_opts = {
+            "outtmpl": output_path,
+            "format": "worst",
+        }
+        
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                info = ydl.sanitize_info(info)
+
+                filename = output_path.replace("%(title)s", info["title"]).replace("%(ext)s", info["ext"])
+
+            if os.path.exists(filename):
+                print("Download successful")
+                return filename
+            else:
+                print("Download failed")
+                return None
+        except Exception as e:
+            print("Download failed")
+            return None
 
 
-@app.route("/", methods=["POST"])
-def home():
-    result = {"message": "Request Received."}
+    """Fetches the transcript for a YouTube video.
 
-    return jsonify(result), 200
+    Args:
+        url (str): The YouTube video URL.
+        lang (str, optional): The language code for the transcript. Defaults to "en".
+
+    Returns:
+        Optional[str]: The transcript text if available, else None.
+    """
+    def get_transcript(url, lang = "en"):
+        os.makedirs("temp/subtitles", exist_ok=True)
+
+        ydl_opts = {
+            "writesubtitles": True,
+            "writeautomaticsub": True,
+            "subtitleslangs": [lang],
+            "skip_download": True,
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(url, download=False)
+                subtitles = info_dict.get("subtitles") or info_dict.get("automatic_captions")
+
+                video_title = info_dict.get("title", "unknown_video")
+                transcript_url = None
+
+                for lang, subs in subtitles.items():
+                    if lang.startswith("en"):
+                        for sub in subs:
+                            if sub["ext"] == "vtt":
+                                transcript_url = sub["url"]
+                                # TODO: make sure that vtt is the optimal format
+                                break
+
+            if transcript_url:
+                response = requests.get(transcript_url)
+                if response.status_code == 200:
+                    with open(f"temp/subtitles/{video_title}.vtt", "w", encoding="utf-8") as file:
+                        file.write(response.text)
+
+                    return True
+                else:
+                    print("Failed to fetch transcript")
+                    # TODO: If not available, use NLP tools
+                    return None
+            else:
+                print("Failed to fetch transcript")
+                # TODO: If not available, use NLP tools
+                return None
+        except Exception as e:
+            print("Failed to fetch transcript")
+            return None
+
+            
+    return app
 
 
 if __name__ == "__main__":
     if not os.path.exists("temp"):
         os.makedirs("temp")
-    app.run(debug=True, host="0.0.0.0", port=8000)
+    app = create_app()
+    app.run(port=8001, host='127.0.0.1', debug=True,
+            use_evalex=False, use_reloader=False)
+    
