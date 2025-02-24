@@ -1,6 +1,5 @@
 from flask import Flask, jsonify, request
 import os
-import json
 import yt_dlp
 import requests
 
@@ -31,11 +30,11 @@ def create_app():
             result = {"message": "Video and transcript download successfully."}
 
             return jsonify(result), 200
-        
+
     @app.route("/health", methods=["GET"])
     def health_check():
         return jsonify({"status": "OK"}), 200
-    
+
     """Downloads the raw YouTube video.
 
     Args:
@@ -52,7 +51,7 @@ def create_app():
             "outtmpl": output_path,
             "format": "worst",
         }
-        
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -67,7 +66,7 @@ def create_app():
                 print("Download failed")
                 return None
         except Exception as e:
-            print("Download failed")
+            print(f"Download failed. Exception: {e}")
             return None
 
     """Fetches the transcript for a YouTube video.
@@ -121,10 +120,11 @@ def create_app():
                 # TODO: If not available, use NLP tools
                 return None
         except Exception as e:
-            print("Failed to fetch transcript")
+            print(f"Failed to fetch transcript. Exception {e}")
             return None
-    
+
     return app
+
 
 if __name__ == "__main__":
     if not os.path.exists("temp"):
@@ -132,4 +132,4 @@ if __name__ == "__main__":
     app = create_app()
     app.run(port=8001, host='127.0.0.1', debug=True,
             use_evalex=False, use_reloader=False)
-    
+
