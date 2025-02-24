@@ -132,4 +132,3 @@ if __name__ == "__main__":
     app = create_app()
     app.run(port=8001, host='127.0.0.1', debug=True,
             use_evalex=False, use_reloader=False)
-
