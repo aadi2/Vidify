@@ -12,7 +12,7 @@ class TestSuite(unittest.TestCase):
         self.no_transcript_url = "https://www.youtube.com/watch?v=sD9gTAFDq40"
         self.valid_url = "https://www.youtube.com/watch?v=W86cTIoMv2U"
 
-        self.process = subprocess.Popen([sys.executable, "src/backend/app.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.process = subprocess.Popen([sys.executable, "src/backend/app.py"], stdout=sys.stdout, stderr=sys.stderr)
 
         for _ in range(6):
             try:
