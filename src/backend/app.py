@@ -4,6 +4,9 @@ import yt_dlp
 import requests
 
 
+COOKIES_FILE = "cookies.txt"
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -50,6 +53,7 @@ def create_app():
         ydl_opts = {
             "outtmpl": output_path,
             "format": "worst",
+            "cookiefile": COOKIES_FILE,
         }
 
         try:

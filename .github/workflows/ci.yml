@@ -55,6 +55,11 @@ jobs:
         run: |
            $env:PYTHONPATH += ";$pwd"
 
+      - name: Setup YouTube Cookies
+        env:
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+        run: echo "$YT_COOKIES" > cookies.txt
+
       - name: Run tests with coverage (Linux & macOS)
         if: runner.os != 'Windows'
         run: |
