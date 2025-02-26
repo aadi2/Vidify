@@ -16,3 +16,6 @@ models/*.pt
 build/
 
 service_account.json
+
+temp/
+cookies.txt
