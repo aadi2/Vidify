@@ -90,6 +90,7 @@ def create_app():
             "writeautomaticsub": True,
             "subtitleslangs": [lang],
             "skip_download": True,
+            "cookiefile": COOKIES_FILE,
         }
 
         try:

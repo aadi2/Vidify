@@ -3,6 +3,8 @@ import sys
 import subprocess
 import requests
 import time
+import os
+import shutil
 
 BASE_URL = "http://127.0.0.1:8001"
 
@@ -49,6 +51,9 @@ class TestSuite(unittest.TestCase):
         del self.invalid_url
         del self.no_transcript_url
         del self.valid_url
+
+        if os.path.exists("temp"):
+            shutil.rmtree("temp")
 
 if __name__ == '__main__':
     unittest.main(testRunner=unittest.TextTestRunner(stream=sys.stdout))
