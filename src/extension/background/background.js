@@ -21,6 +21,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             case "getSearchHistory":
                 handleSearchHistory(sendResponse);
                 break;
+            
+            case "fetchFromSPI":
+                await fetchFromSPI(request.endpoint, request.payload, sendResponse);
+                break;
 
             default:
                 console.warn("Unknown action received: ", request.action);
@@ -59,8 +63,12 @@ async function handleObjectSearch(videoId, objectName, sendResponse) {
         const result = await response.json();
 
         if (response.ok) {
-            console.log("Object detection successful:", result);
-            sendResponse({ status: "success", data: result });
+            if (validateObjectSearchResponse(result)) {
+                console.log("Object detection successful:", result);
+                sendResponse({ status: "success", data: result });
+            } else {
+                throw new Error("Response schema validation failed.");
+            }
         } else {
             throw new Error(result.message || "Object detection failed.");
         }
@@ -135,4 +143,46 @@ function storeSearchResult(searchResult) {
             console.log("Search result stored in history.");
         });
     });
+}
+
+/**
+ * Generic handler to fetch data from any SPI endpoint.
+ */
+async function fetchFromSPI(endpoint, payload, sendResponse) {
+    try {
+        const apiUrl = `http://localhost:5000${endpoint}`;
+
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            sendResponse({ status: "success", data: result });
+        } else {
+            throw new Error(result.message || "SPI request failed.");
+        }
+    } catch (error) {
+        console.error("SPI request error:", error);
+        sendResponse({ status: "error", message: error.message });
+    }
+}
+
+/**
+ * Optional: Validates the schema of the object search response.
+ */
+function validateObjectSearchResponse(data) {
+    // Example schema validation
+    return (
+        Array.isArray(data.results) &&
+        data.results.every(item =>
+            typeof item.timestamp === 'string' &&
+            typeof item.confidence === 'number'
+        )
+    );
 }
