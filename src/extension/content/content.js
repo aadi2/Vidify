@@ -18,6 +18,8 @@ if (videoElement) {
     overlayContainer.style.color = "#fff";
     overlayContainer.style.padding = "10px";
     overlayContainer.style.borderRadius = "5px";
+    overlayContainer.style.maxWidth = "300px";
+    overlayContainer.style.overflowY = "auto";
     document.body.appendChild(overlayContainer);
 }
 
@@ -25,8 +27,8 @@ if (videoElement) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "displayResults") {
         displayResults(request.data);
+        sendResponse({ status: "Results displayed" });
     }
-    sendResponse({ status: "Results displayed" });
 });
 
 /**
@@ -35,9 +37,37 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  */
 function displayResults(results) {
     overlayContainer.innerHTML = "<h3>Search Results:</h3>";
-    results.forEach(result => {
-        const item = document.createElement("p");
-        item.textContent = `Object: ${result.object} at ${result.timestamp}s`;
-        overlayContainer.appendChild(item);
-    });
+
+    if (results.length === 0) {
+        const noResults = document.createElement("p");
+        noResults.textContent = "No results found.";
+        overlayContainer.appendChild(noResults);
+    } else {
+        results.forEach(result => {
+            const item = document.createElement("p");
+            item.textContent = `Object: ${result.object} at ${result.timestamp}s`;
+            item.style.cursor = "pointer";
+            item.style.textDecoration = "underline";
+            item.onclick = () => seekToTimestamp(result.timestamp);
+            overlayContainer.appendChild(item);
+        });
+    }
+
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "Close Results";
+    closeButton.style.marginTop = "10px";
+    closeButton.style.cursor = "pointer";
+    closeButton.onclick = () => overlayContainer.innerHTML = "";  // Clear overlay
+    overlayContainer.appendChild(closeButton);
+}
+
+/**
+ * Seek video to specified timestamp.
+ * @param {string} timestamp - Time in seconds
+ */
+function seekToTimestamp(timestamp) {
+    if (videoElement) {
+        videoElement.currentTime = parseFloat(timestamp);
+        videoElement.play();
+    }
 }
