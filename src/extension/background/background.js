@@ -3,6 +3,19 @@ chrome.runtime.onInstalled.addListener(() => {
     console.log("Vidify extension installed and ready!");
 });
 
+// Detect YouTube video URL and store videoId in chrome.storage.local
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.url && isYouTubeVideoURL(changeInfo.url)) {
+        const videoId = extractYouTubeVideoID(changeInfo.url);
+        if (videoId) {
+            console.log(`Detected YouTube video: ${videoId}`);
+            chrome.storage.local.set({ currentVideoId: videoId }, () => {
+                console.log(`Stored video ID: ${videoId}`);
+            });
+        }
+    }
+});
+
 /**
  * Listen for messages from content scripts or the extension popup
  * Handles requests such as object detection, transcript search, and search history
@@ -39,6 +52,14 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return true;
 });
 
+async function getCurrentVideoId(providedVideoId) {
+    if (providedVideoId) {
+        return providedVideoId;  // Prefer directly provided videoId
+    }
+    const result = await chrome.storage.local.get(["currentVideoId"]);
+    return result.currentVideoId || null;  // Fallback to stored videoId
+}
+
 /**
  * Handles object detection search by making an API call to the backend.
  * @param {string} videoId - YouTube video ID
@@ -46,10 +67,16 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
  * @param {function} sendResponse - Function to send response back to the caller
  */
 async function handleObjectSearch(videoId, objectName, sendResponse) {
+    const finalVideoId = await getCurrentVideoId(videoId);
+
+    if (!finalVideoId) {
+        sendResponse({ status: "error", message: "No video detected or provided" });
+        return;
+    }
+
     try {
-        console.log(`Searching for object: ${objectName} in video: ${videoId}`);
+        console.log(`Searching for object: ${objectName} in video: ${finalVideoId}`);
         
-        // Example API endpoint (modify according to your backend setup)
         const apiUrl = `http://localhost:5000/search/object`;
 
         const response = await fetch(apiUrl, {
@@ -57,7 +84,7 @@ async function handleObjectSearch(videoId, objectName, sendResponse) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ videoId, objectName })
+            body: JSON.stringify({ videoId: finalVideoId, objectName })
         });
 
         const result = await response.json();
@@ -85,10 +112,16 @@ async function handleObjectSearch(videoId, objectName, sendResponse) {
  * @param {function} sendResponse - Function to send response back to the caller
  */
 async function handleTranscriptSearch(videoId, searchTerm, sendResponse) {
-    try {
-        console.log(`Searching for term: ${searchTerm} in video: ${videoId}`);
+    const finalVideoId = await getCurrentVideoId(videoId);
 
-        // Example API endpoint (modify according to your backend setup)
+    if (!finalVideoId) {
+        sendResponse({ status: "error", message: "No video detected or provided" });
+        return;
+    }
+
+    try {
+        console.log(`Searching for term: ${searchTerm} in video: ${finalVideoId}`);
+
         const apiUrl = `http://localhost:5000/search/transcript`;
 
         const response = await fetch(apiUrl, {
@@ -96,7 +129,7 @@ async function handleTranscriptSearch(videoId, searchTerm, sendResponse) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ videoId, searchTerm })
+            body: JSON.stringify({ videoId: finalVideoId, searchTerm })
         });
 
         const result = await response.json();
@@ -149,15 +182,23 @@ function storeSearchResult(searchResult) {
  * Generic handler to fetch data from any SPI endpoint.
  */
 async function fetchFromSPI(endpoint, payload, sendResponse) {
+    const finalVideoId = await getCurrentVideoId(payload.videoId);
+
+    if (!finalVideoId) {
+        sendResponse({ status: "error", message: "No video detected or provided" });
+        return;
+    }
+
     try {
         const apiUrl = `http://localhost:5000${endpoint}`;
+        const requestBody = { ...payload, videoId: finalVideoId };  // Auto-add videoId if not in payload
 
         const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(requestBody)
         });
 
         const result = await response.json();

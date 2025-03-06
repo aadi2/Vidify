@@ -1,20 +1,92 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, redirect, session, url_for
 import os
 import yt_dlp
 import requests
+from urllib.parse import urlencode
+from dotenv import load_dotenv
 
+load_dotenv()
 
 COOKIES_FILE = "cookies.txt"
 
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+REDIRECT_URI = os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:8001/oauth/callback')
+SCOPE = 'https://www.googleapis.com/auth/youtube.readonly'
+
+# Simple in-memory storage (replace with a database for production)
+user_tokens = {}
 
 def create_app():
     app = Flask(__name__)
+    app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super-secret-key')
+
+    @app.route("/health", methods=["GET"])
+    def health_check():
+        return jsonify({"status": "OK"}), 200
+
+    @app.route("/login", methods=["GET"])
+    def login():
+        params = {
+            'client_id': GOOGLE_CLIENT_ID,
+            'redirect_uri': REDIRECT_URI,
+            'response_type': 'code',
+            'scope': SCOPE,
+            'access_type': 'offline',
+            'prompt': 'consent'
+        }
+        auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urlencode(params)
+        return redirect(auth_url)
+
+    @app.route("/oauth/callback", methods=["GET"])
+    def oauth_callback():
+        code = request.args.get("code")
+        if not code:
+            return jsonify({"error": "Authorization code not provided"}), 400
+
+        token_url = "https://oauth2.googleapis.com/token"
+        data = {
+            'code': code,
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'redirect_uri': REDIRECT_URI,
+            'grant_type': 'authorization_code'
+        }
+
+        response = requests.post(token_url, data=data)
+        token_data = response.json()
+
+        if 'error' in token_data:
+            return jsonify({"error": token_data['error']}), 400
+
+        session['access_token'] = token_data['access_token']
+        session['refresh_token'] = token_data.get('refresh_token')  # Might be missing if user already consented
+        session['token_type'] = token_data['token_type']
+
+        return jsonify({
+            "message": "Successfully authenticated",
+            "access_token": session['access_token']
+        })
+    
+    def validate_and_log_video_id(request_data):
+        """ Helper to extract and validate videoId from request JSON. """
+        video_id = request_data.get("videoId")
+        if not video_id:
+            return None, jsonify({"error": "Missing videoId"}), 400
+
+        print(f"Processing request for video ID: {video_id}")
+        return video_id, None, None
 
     @app.route("/", methods=["GET"])
     def home():
+        if 'access_token' not in session:
+            return jsonify({"error": "Unauthorized - Please log in via /login"}), 401
+
         yt_url = request.args.get("hash_id")
-        # TODO: validate url with regex for security
-        # TODO: authentication
+         # TODO: validate url with regex for security
+        if not yt_url:
+            return jsonify({"error": "Missing video URL"}), 400
+        
         filename = get_video(yt_url)
         transcript = get_transcript(yt_url)
         # TODO: Object recogniton in the video (videoUtils.py)
