@@ -29,4 +29,4 @@ class transcriptUtils():
     def search_transcript():
         # Owner: Trent
         pass
-    
+
