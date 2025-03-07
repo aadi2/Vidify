@@ -9,6 +9,7 @@ import subprocess
 from unittest.mock import patch
 from build import backend  # Correct import now accessible due to sys.path.insert()
 
+
 @patch('subprocess.check_call')
 @patch('subprocess.Popen')
 def test_backend(mock_popen, mock_check_call):
@@ -17,7 +18,7 @@ def test_backend(mock_popen, mock_check_call):
 
     # Assert that dependencies were installed correctly
     mock_check_call.assert_called_once_with([
-        sys.executable, "-m", "pip", "install", "-r", "src/backend/requirements.txt"
+        sys.executable, "-m", "pip", "install", "-r", "requirements.txt"
     ])
 
     # Assert that the backend app was started
