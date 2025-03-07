@@ -1,14 +1,13 @@
 import sys
 import os
 
-# Add src to PYTHONPATH dynamically
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+# Add src/ to the Python path so `build` can be found
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
 
 import pytest
 import subprocess
 from unittest.mock import patch
-from build import backend  # Correct import now accessible due to sys.path.insert()
-
+from build import backend  # Now this should work
 
 @patch('subprocess.check_call')
 @patch('subprocess.Popen')

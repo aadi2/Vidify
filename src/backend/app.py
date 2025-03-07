@@ -21,6 +21,11 @@ user_tokens = {}
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super-secret-key')
+    
+    if os.getenv('TEST_MODE') == 'true':
+        @app.before_request
+        def mock_auth():
+            session['access_token'] = 'test-access-token'
 
     @app.route("/health", methods=["GET"])
     def health_check():
