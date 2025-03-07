@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, redirect, session, url_for
+from flask import Flask, jsonify, request, redirect, session
 import os
 import yt_dlp
 import requests
@@ -16,6 +16,7 @@ SCOPE = 'https://www.googleapis.com/auth/youtube.readonly'
 
 # Simple in-memory storage (replace with a database for production)
 user_tokens = {}
+
 
 def create_app():
     app = Flask(__name__)
@@ -67,9 +68,9 @@ def create_app():
             "message": "Successfully authenticated",
             "access_token": session['access_token']
         })
-    
+
     def validate_and_log_video_id(request_data):
-        """ Helper to extract and validate videoId from request JSON. """
+        """Helper to extract and validate videoId from request JSON."""
         video_id = request_data.get("videoId")
         if not video_id:
             return None, jsonify({"error": "Missing videoId"}), 400
@@ -83,45 +84,43 @@ def create_app():
             return jsonify({"error": "Unauthorized - Please log in via /login"}), 401
 
         yt_url = request.args.get("hash_id")
-         # TODO: validate url with regex for security
+
+        # TODO: Validate URL with regex for security
         if not yt_url:
             return jsonify({"error": "Missing video URL"}), 400
-        
+
         filename = get_video(yt_url)
         transcript = get_transcript(yt_url)
-        # TODO: Object recogniton in the video (videoUtils.py)
+
+        # TODO: Object recognition in the video (videoUtils.py)
         # TODO: Transcript search (transcriptUtils.py)
 
         if not filename:
             result = {"message": "Not able to download the video."}
-
             return jsonify(result), 404
-        elif not transcript:
+
+        if not transcript:
             result = {"message": "Not able to fetch transcript."}
-
             return jsonify(result), 404
-        else:
-            print("Transcript: ", transcript)
-            result = {"message": "Video and transcript download successfully."}
 
-            return jsonify(result), 200
+        print("Transcript:", transcript)
+        result = {"message": "Video and transcript downloaded successfully."}
+        return jsonify(result), 200
 
-    @app.route("/health", methods=["GET"])
-    def health_check():
-        return jsonify({"status": "OK"}), 200
-
-    """Downloads the raw YouTube video.
-
-    Args:
-        url (str): The YouTube video URL.
-
-    Returns:
-        Optional[str]: The file name in which the video is stored if available, else None.
-    """
     def get_video(url):
+        """
+        Downloads the raw YouTube video.
+
+        Args:
+            url (str): The YouTube video URL.
+
+        Returns:
+            Optional[str]: The file name in which the video is stored if available, else None.
+        """
         output_dir = "temp/video"
         os.makedirs(output_dir, exist_ok=True)
         output_path = 'temp/video/%(title)s.%(ext)s'
+
         ydl_opts = {
             "outtmpl": output_path,
             "format": "worst",
@@ -138,23 +137,25 @@ def create_app():
             if os.path.exists(filename):
                 print("Download successful")
                 return filename
-            else:
-                print("Download failed")
-                return None
+
+            print("Download failed")
+            return None
+
         except Exception as e:
             print(f"Download failed. Exception: {e}")
             return None
 
-    """Fetches the transcript for a YouTube video.
-
-    Args:
-        url (str): The YouTube video URL.
-        lang (str, optional): The language code for the transcript. Defaults to "en".
-
-    Returns:
-        Optional[str]: The transcript text if available, else None.
-    """
     def get_transcript(url, lang="en"):
+        """
+        Fetches the transcript for a YouTube video.
+
+        Args:
+            url (str): The YouTube video URL.
+            lang (str, optional): The language code for the transcript. Defaults to "en".
+
+        Returns:
+            Optional[str]: The transcript text if available, else None.
+        """
         os.makedirs("temp/subtitles", exist_ok=True)
 
         ydl_opts = {
@@ -173,12 +174,11 @@ def create_app():
                 video_title = info_dict.get("title", "unknown_video")
                 transcript_url = None
 
-                for lang, subs in subtitles.items():
-                    if lang.startswith("en"):
+                for lang_key, subs in subtitles.items():
+                    if lang_key.startswith("en"):
                         for sub in subs:
                             if sub["ext"] == "vtt":
                                 transcript_url = sub["url"]
-                                # TODO: make sure that vtt is the optimal format
                                 break
 
             if transcript_url:
@@ -188,14 +188,15 @@ def create_app():
                         file.write(response.text)
 
                     return True
-                else:
-                    print("Failed to fetch transcript")
-                    # TODO: If not available, use NLP tools
-                    return None
-            else:
+
                 print("Failed to fetch transcript")
                 # TODO: If not available, use NLP tools
                 return None
+
+            print("Failed to fetch transcript")
+            # TODO: If not available, use NLP tools
+            return None
+
         except Exception as e:
             print(f"Failed to fetch transcript. Exception {e}")
             return None
@@ -206,6 +207,6 @@ def create_app():
 if __name__ == "__main__":
     if not os.path.exists("temp"):
         os.makedirs("temp")
+
     app = create_app()
-    app.run(port=8001, host='127.0.0.1', debug=True,
-            use_evalex=False, use_reloader=False)
+    app.run(port=8001, host='127.0.0.1', debug=True, use_evalex=False, use_reloader=False)
