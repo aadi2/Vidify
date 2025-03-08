@@ -45,3 +45,4 @@ class transcriptUtils():
                 matches.append((caption.start, caption.text.strip()))
 
         return matches
+    
