@@ -33,7 +33,9 @@ class transcriptUtils():
 
         if not transcript or not keyword:
             return []
-
+        
+        transcript = "temp/subtitles/" + transcript
+    
         keyword = keyword.lower()
         matches = []
 
