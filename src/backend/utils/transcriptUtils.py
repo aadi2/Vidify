@@ -1,7 +1,7 @@
 import yt_dlp
 import os
-import whisper
 import webvtt
+
 
 class transcriptUtils():
 
@@ -72,7 +72,7 @@ class transcriptUtils():
                 file.write(f"{start_vtt} --> {end_vtt}\n{text}\n\n")
 
         os.remove(self.audio_file)
-        print(f"Transcript created.")
+        print("Transcript created.")
         return self.transcript_file
 
     """Search the transcript for the keywords.
@@ -84,9 +84,9 @@ class transcriptUtils():
     def search_transcript(self, transcript, keyword):
         if not transcript or not keyword:
             return []
-        
+
         transcript = "temp/subtitles/" + transcript
-    
+
         keyword = keyword.lower()
         matches = []
 
@@ -97,4 +97,3 @@ class transcriptUtils():
                 matches.append((caption.start, caption.text.strip()))
 
         return matches
-    
