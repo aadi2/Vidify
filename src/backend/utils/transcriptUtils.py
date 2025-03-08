@@ -1,3 +1,4 @@
+import webvtt
 
 class transcriptUtils():
 
@@ -7,7 +8,7 @@ class transcriptUtils():
 
     Returns: None
     """
-    def __init__():
+    def __init__(self):
         pass
 
     """Create a transcript if it is not available.
@@ -16,7 +17,7 @@ class transcriptUtils():
 
     Returns: None
     """
-    def create_transcript():
+    def create_transcript(self):
         # Owner: Ola
         pass
 
@@ -26,6 +27,22 @@ class transcriptUtils():
 
     Returns: None
     """
-    def search_transcript():
+    def search_transcript(self, transcript, keyword):
         # Owner: Trent
-        pass
+
+        if not transcript or not keyword:
+            return []
+        
+        transcript = "temp/subtitles/" + transcript
+    
+        keyword = keyword.lower()
+        matches = []
+
+        for caption in webvtt.read(transcript):
+            caption_text = caption.text.lower()
+
+            if keyword in caption_text:
+                matches.append((caption.start, caption.text.strip()))
+
+        return matches
+    
