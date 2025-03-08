@@ -11,6 +11,7 @@ from build import backend  # Now this should work
 
 @patch('subprocess.check_call')
 @patch('subprocess.Popen')
+# @pytest.mark.skip(reason="Takes long time, testing other things.")
 def test_backend(mock_popen, mock_check_call):
     # Simulate backend() running successfully
     backend()
