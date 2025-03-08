@@ -1,6 +1,5 @@
 import webvtt
 
-
 class transcriptUtils():
 
     """Class constructor
