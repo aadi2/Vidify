@@ -2,8 +2,13 @@ from flask import Flask, jsonify, request, redirect, session
 import os
 import yt_dlp
 import requests
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse, urlunparse, quote
 from dotenv import load_dotenv
+import re
+import logging
+
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 load_dotenv()
 
@@ -17,10 +22,31 @@ SCOPE = 'https://www.googleapis.com/auth/youtube.readonly'
 # Simple in-memory storage (replace with a database for production)
 user_tokens = {}
 
+def is_valid_youtube_url(url):
+    """
+    Validate the YouTube URL using regex and domain whitelisting.
+    Accepts URLs from youtube.com/watch?v=... and youtu.be/...
+    """
+    pattern = re.compile(r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+")
+    return bool(pattern.match(url))
+
+def sanitize_url(url):
+    """
+    Sanitize the URL by parsing and safely quoting its components.
+    """
+    parsed = urlparse(url)
+    safe_path = quote(parsed.path)
+    safe_query = quote(parsed.query, safe="=&")
+    return urlunparse((parsed.scheme, parsed.netloc, safe_path, parsed.params, safe_query, parsed.fragment))
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super-secret-key')
+    
+    # Set up rate limiting: 10 requests per minute by default
+    limiter = Limiter(key_func=get_remote_address, default_limits=["10 per minute"])
+    limiter.init_app(app)
+    
     if os.getenv('TEST_MODE') == 'true':
         @app.before_request
         def mock_auth():
@@ -97,10 +123,11 @@ def create_app():
         if not video_id:
             return None, jsonify({"error": "Missing videoId"}), 400
 
-        print(f"Processing request for video ID: {video_id}")
+        app.logger.info(f"Processing request for video ID: {video_id}")
         return video_id, None, None
 
     @app.route("/", methods=["GET"])
+    @limiter.limit("10 per minute")
     def home():
         if 'access_token' not in session:
             return jsonify({"error": "Unauthorized - Please log in via /login"}), 401
@@ -111,6 +138,12 @@ def create_app():
         if not yt_url:
             return jsonify({"error": "Missing video URL"}), 400
 
+        if not is_valid_youtube_url(yt_url):
+            app.logger.warning(f"Invalid YouTube URL attempted: {yt_url}")
+            return jsonify({"error": "Invalid video URL"}), 400
+
+        safe_url = sanitize_url(yt_url)
+        
         filename = get_video(yt_url)
         transcript = get_transcript(yt_url)
 
@@ -222,6 +255,11 @@ def create_app():
         except Exception as e:
             print(f"Failed to fetch transcript. Exception {e}")
             return None
+
+    @app.route("/test-rate-limit", methods=["GET"])
+    @limiter.limit("3 per minute")
+    def test_rate_limit():
+        return jsonify({"message": "This is a rate-limited endpoint."}), 200
 
     return app
 
