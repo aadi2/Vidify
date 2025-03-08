@@ -15,6 +15,7 @@ models/*.pt
 .env
 build/
 
+service_account.json
 
 temp/
 cookies.txt
