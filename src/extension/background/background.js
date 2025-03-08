@@ -1,3 +1,14 @@
+const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
+const REDIRECT_URL = chrome.identity.getRedirectURL();
+const CLIENT_ID = "378225991600-ni4cvnivl55g4jbjo1no4de2qaks604b.apps.googleusercontent.com";
+
+const OAUTH_PARAMS = {
+    client_id: CLIENT_ID,
+    response_type: "token",
+    redirect_uri: REDIRECT_URL,
+    scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email"
+};
+
 // When the extension is installed or updated
 chrome.runtime.onInstalled.addListener(() => {
     console.log("Vidify extension installed and ready!");
@@ -23,6 +34,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     try {
         switch (request.action) {
+            case "login":
+                startGoogleLogin(sendResponse);
+                break;
+
             case "searchObject":
                 await handleObjectSearch(request.videoId, request.objectName, sendResponse);
                 break;
@@ -52,12 +67,101 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return true;
 });
 
+/**
+ * Initiates Google OAuth authentication using Chrome Identity API.
+ */
+function startGoogleLogin(sendResponse) {
+    const authUrl = `${GOOGLE_AUTH_URL}?${new URLSearchParams(OAUTH_PARAMS)}`;
+
+    chrome.identity.launchWebAuthFlow(
+        { url: authUrl, interactive: true },
+        (redirectUrl) => {
+            if (chrome.runtime.lastError) {
+                console.error("OAuth failed:", chrome.runtime.lastError);
+                sendResponse({ status: "error", message: chrome.runtime.lastError.message });
+                return;
+            }
+
+            if (redirectUrl) {
+                // Extract access token from the redirect URL
+                const urlParams = new URLSearchParams(new URL(redirectUrl).hash.substring(1));
+                const accessToken = urlParams.get("access_token");
+
+                if (accessToken) {
+                    console.log("OAuth successful, token:", accessToken);
+                    chrome.storage.local.set({ accessToken }, () => {
+                        console.log("Access token saved.");
+                    });
+                    verifyTokenWithBackend(accessToken);
+                    sendResponse({ status: "success", message: "Logged in successfully" });
+                }
+            }
+        }
+    );
+}
+
+/**
+ * Sends the access token to your Flask backend for verification.
+ */
+function verifyTokenWithBackend(accessToken) {
+    fetch("http://localhost:8001/verify-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Token verification response:", data);
+    })
+    .catch(error => {
+        console.error("Error verifying token:", error);
+    });
+}
+
+/**
+ * Checks if a URL is a YouTube video URL.
+ */
+function isYouTubeVideoURL(url) {
+    return url.includes("youtube.com/watch") || url.includes("youtu.be/");
+}
+
+/**
+ * Extracts the YouTube video ID from a URL.
+ */
+function extractYouTubeVideoID(url) {
+    const match = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
+    return match ? match[1] : null;
+}
+
+/**
+ * Gets the current video ID from the provided parameter or from storage.
+ */
 async function getCurrentVideoId(providedVideoId) {
     if (providedVideoId) {
         return providedVideoId;  // Prefer directly provided videoId
     }
     const result = await chrome.storage.local.get(["currentVideoId"]);
     return result.currentVideoId || null;  // Fallback to stored videoId
+}
+
+/**
+ * Performs an authenticated fetch call using the stored access token.
+ */
+async function authenticatedFetch(url, payload) {
+    const result = await chrome.storage.local.get(["accessToken"]);
+    const accessToken = result.accessToken;
+    if (!accessToken) {
+        return { status: "error", message: "User not authenticated" };
+    }
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(payload)
+    });
+    return response.json();
 }
 
 /**

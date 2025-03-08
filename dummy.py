@@ -17,10 +17,11 @@ SCOPE = 'https://www.googleapis.com/auth/youtube.readonly'
 # Simple in-memory storage (replace with a database for production)
 user_tokens = {}
 
-
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super-secret-key')
+    
+    # Enable test mode if needed.
     if os.getenv('TEST_MODE') == 'true':
         @app.before_request
         def mock_auth():
@@ -90,13 +91,12 @@ def create_app():
             return jsonify({"message": "Token valid", "user": user_info}), 200
         else:
             return jsonify({"error": "Invalid token"}), 401
-        
+
     def validate_and_log_video_id(request_data):
         """Helper to extract and validate videoId from request JSON."""
         video_id = request_data.get("videoId")
         if not video_id:
             return None, jsonify({"error": "Missing videoId"}), 400
-
         print(f"Processing request for video ID: {video_id}")
         return video_id, None, None
 
@@ -106,16 +106,12 @@ def create_app():
             return jsonify({"error": "Unauthorized - Please log in via /login"}), 401
 
         yt_url = request.args.get("hash_id")
-
-        # TODO: Validate URL with regex for security
+        # TODO: validate url with regex for security
         if not yt_url:
             return jsonify({"error": "Missing video URL"}), 400
 
         filename = get_video(yt_url)
         transcript = get_transcript(yt_url)
-
-        # TODO: Object recognition in the video (videoUtils.py)
-        # TODO: Transcript search (transcriptUtils.py)
 
         if not filename:
             result = {"message": "Not able to download the video."}
@@ -132,37 +128,25 @@ def create_app():
     def get_video(url):
         """
         Downloads the raw YouTube video.
-
-        Args:
-            url (str): The YouTube video URL.
-
-        Returns:
-            Optional[str]: The file name in which the video is stored if available, else None.
         """
         output_dir = "temp/video"
         os.makedirs(output_dir, exist_ok=True)
         output_path = 'temp/video/%(title)s.%(ext)s'
-
         ydl_opts = {
             "outtmpl": output_path,
             "format": "worst",
             "cookiefile": COOKIES_FILE,
         }
-
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 info = ydl.sanitize_info(info)
-
                 filename = output_path.replace("%(title)s", info["title"]).replace("%(ext)s", info["ext"])
-
             if os.path.exists(filename):
                 print("Download successful")
                 return filename
-
             print("Download failed")
             return None
-
         except Exception as e:
             print(f"Download failed. Exception: {e}")
             return None
@@ -170,16 +154,8 @@ def create_app():
     def get_transcript(url, lang="en"):
         """
         Fetches the transcript for a YouTube video.
-
-        Args:
-            url (str): The YouTube video URL.
-            lang (str, optional): The language code for the transcript. Defaults to "en".
-
-        Returns:
-            Optional[str]: The transcript text if available, else None.
         """
         os.makedirs("temp/subtitles", exist_ok=True)
-
         ydl_opts = {
             "writesubtitles": True,
             "writeautomaticsub": True,
@@ -187,48 +163,36 @@ def create_app():
             "skip_download": True,
             "cookiefile": COOKIES_FILE,
         }
-
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=False)
                 subtitles = info_dict.get("subtitles") or info_dict.get("automatic_captions")
-
                 video_title = info_dict.get("title", "unknown_video")
                 transcript_url = None
-
                 for lang_key, subs in subtitles.items():
                     if lang_key.startswith("en"):
                         for sub in subs:
                             if sub["ext"] == "vtt":
                                 transcript_url = sub["url"]
                                 break
-
             if transcript_url:
                 response = requests.get(transcript_url)
                 if response.status_code == 200:
                     with open(f"temp/subtitles/{video_title}.vtt", "w", encoding="utf-8") as file:
                         file.write(response.text)
-
                     return True
-
                 print("Failed to fetch transcript")
-                # TODO: If not available, use NLP tools
                 return None
-
             print("Failed to fetch transcript")
-            # TODO: If not available, use NLP tools
             return None
-
         except Exception as e:
             print(f"Failed to fetch transcript. Exception {e}")
             return None
 
     return app
 
-
 if __name__ == "__main__":
     if not os.path.exists("temp"):
         os.makedirs("temp")
-
     app = create_app()
     app.run(port=8001, host='127.0.0.1', debug=True, use_evalex=False, use_reloader=False)
