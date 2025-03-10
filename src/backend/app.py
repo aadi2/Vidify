@@ -5,10 +5,10 @@ import requests
 from urllib.parse import urlencode, urlparse, urlunparse, quote
 from dotenv import load_dotenv
 import re
-import logging
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+
 
 load_dotenv()
 
@@ -22,6 +22,7 @@ SCOPE = 'https://www.googleapis.com/auth/youtube.readonly'
 # Simple in-memory storage (replace with a database for production)
 user_tokens = {}
 
+
 def is_valid_youtube_url(url):
     """
     Validate the YouTube URL using regex and domain whitelisting.
@@ -29,6 +30,7 @@ def is_valid_youtube_url(url):
     """
     pattern = re.compile(r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+")
     return bool(pattern.match(url))
+
 
 def sanitize_url(url):
     """
@@ -39,14 +41,15 @@ def sanitize_url(url):
     safe_query = quote(parsed.query, safe="=&")
     return urlunparse((parsed.scheme, parsed.netloc, safe_path, parsed.params, safe_query, parsed.fragment))
 
+
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super-secret-key')
-    
+
     # Set up rate limiting: 10 requests per minute by default
     limiter = Limiter(key_func=get_remote_address, default_limits=["10 per minute"])
     limiter.init_app(app)
-    
+
     if os.getenv('TEST_MODE') == 'true':
         @app.before_request
         def mock_auth():
@@ -116,7 +119,7 @@ def create_app():
             return jsonify({"message": "Token valid", "user": user_info}), 200
         else:
             return jsonify({"error": "Invalid token"}), 401
-        
+
     def validate_and_log_video_id(request_data):
         """Helper to extract and validate videoId from request JSON."""
         video_id = request_data.get("videoId")
@@ -143,9 +146,8 @@ def create_app():
             return jsonify({"error": "Invalid video URL"}), 400
 
         safe_url = sanitize_url(yt_url)
-        
-        filename = get_video(yt_url)
-        transcript = get_transcript(yt_url)
+        filename = get_video(safe_url)
+        transcript = get_transcript(safe_url)
 
         # TODO: Object recognition in the video (videoUtils.py)
         # TODO: Transcript search (transcriptUtils.py)
@@ -241,7 +243,6 @@ def create_app():
                 if response.status_code == 200:
                     with open(f"temp/subtitles/{video_title}.vtt", "w", encoding="utf-8") as file:
                         file.write(response.text)
-
                     return True
 
                 print("Failed to fetch transcript")
