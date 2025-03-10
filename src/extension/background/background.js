@@ -1,3 +1,5 @@
+const API_URL = ""
+
 // Automatically trigger authentication when the extension is installed or started.
 chrome.runtime.onInstalled.addListener(() => {
     console.log("Vidify extension installed and ready!");
@@ -26,7 +28,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
  * Listen for messages from content scripts or the extension popup
  * Handles requests such as object detection, transcript search, and search history
  */
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     try {
         switch (request.action) {
             //case "searchObject":
@@ -34,7 +36,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                 //break;
 
             case "searchTranscript":
-                await handleTranscriptSearch(request.videoId, request.searchTerm, sendResponse);
+                handleTranscriptSearch(request.videoId, request.searchTerm).then((response) => sendResponse(response))
+                return true;
                 break;
 
             case "getSearchHistory":
@@ -42,7 +45,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                 break;
             
             case "fetchFromSPI":
-                await fetchFromSPI(request.endpoint, request.payload, sendResponse);
+                fetchFromSPI(request.endpoint, request.payload, sendResponse);
                 break;
 
             default:
@@ -156,25 +159,29 @@ async function handleObjectSearch(videoId, objectName, sendResponse) {
  * @param {string} searchTerm - Keyword or phrase to search in the transcript
  * @param {function} sendResponse - Function to send response back to the caller
  */
-async function handleTranscriptSearch(videoId, searchTerm, sendResponse) {
-    const finalVideoId = await getCurrentVideoId(videoId);
+async function handleTranscriptSearch(videoId, searchTerm) {
+    //const finalVideoId = await getCurrentVideoId(videoId);
+    console.log(`videoID: ${videoId}`);
   
-    if (!finalVideoId) {
-      sendResponse({ status: "error", message: "No video detected or provided" });
+    if (!videoId) {
+      return { status: "error", message: "No video detected or provided" };
       return;
     }
   
     try {
-      console.log(`Searching for term: ${searchTerm} in video: ${finalVideoId}`);
+      console.log(`Searching for term: ${searchTerm} in video: ${videoId}`);
   
-      const apiUrl = `http://localhost:5000/search/transcript`;
+      const apiUrl = API_URL + "/?yt_url=" + videoId + "&keyword=" + searchTerm;
+
+      //console.log(`API url`, apiUrl);
       const response = await fetch(apiUrl, {
-        method: "POST",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ videoId: finalVideoId, searchTerm })
-      });
+        mode: 'cors',
+      })
+
   
       console.log("HTTP Status:", response.status, response.statusText);
       const rawText = await response.text();
@@ -189,13 +196,13 @@ async function handleTranscriptSearch(videoId, searchTerm, sendResponse) {
   
       if (response.ok) {
         console.log("Transcript search successful:", result);
-        sendResponse({ status: "success", data: result });
+        return { status: "success", data: result };
       } else {
         throw new Error(result.message || `Transcript search failed with status ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error("Transcript search error:", error);
-      sendResponse({ status: "error", message: error.message });
+      return { status: "error", message: error.message };
     }
   }
   

@@ -20,7 +20,8 @@
       "https://api.your-backend.com/*",
       "https://accounts.google.com/o/oauth2/auth",
       "https://www.googleapis.com/oauth2/v2/userinfo",
-       "http://localhost:5000/*"
+      "http://localhost:5000/*",
+      "https://vidify-378225991600.us-central1.run.app/*"
     ],
     "background": {
       "service_worker": "background/background.js"
