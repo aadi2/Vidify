@@ -8,6 +8,7 @@
       "default_path": "content/components/search.html"
     },
     "permissions": [
+      "tabs",
       "sidePanel",
       "scripting",
       "storage",
@@ -15,7 +16,8 @@
       "identity"
     ],
     "host_permissions": [
-      "https://www.youtube.com/*",
+      "*://*.youtube.com/*",
+      "*://youtu.be/*",
       "https://api.your-backend.com/*",
       "https://accounts.google.com/o/oauth2/auth",
       "https://www.googleapis.com/oauth2/v2/userinfo"
@@ -32,7 +34,10 @@
     },
     "content_scripts": [
       {
-        "matches": ["https://www.youtube.com/*"],
+        "matches": [
+          "*://*.youtube.com/*", 
+          "*://youtu.be/*"
+        ],
         "js": ["content/content.js"]
       }
     ],
