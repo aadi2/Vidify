@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 import os
 import yt_dlp
 import requests
-
+from utils.transcriptUtils import transcriptUtils
 
 COOKIES_FILE = "cookies.txt"
 
@@ -12,7 +12,8 @@ def create_app():
 
     @app.route("/", methods=["GET"])
     def home():
-        yt_url = request.args.get("hash_id")
+        yt_url = request.args.get("yt_url")
+        keyword = request.args.get("keyword")
         # TODO: validate url with regex for security
         # TODO: authentication
         filename = get_video(yt_url)
@@ -21,18 +22,32 @@ def create_app():
         # TODO: Transcript search (transcriptUtils.py)
 
         if not filename:
-            result = {"message": "Not able to download the video."}
+            result = {"message": "Not able to download the video.",
+                      "results": None}
 
             return jsonify(result), 404
         elif not transcript:
-            result = {"message": "Not able to fetch transcript."}
+            result = {"message": "Not able to fetch transcript.",
+                      "results": None}
+            
+            os.remove(filename)
 
             return jsonify(result), 404
         else:
-            print("Transcript: ", transcript)
-            result = {"message": "Video and transcript download successfully."}
+            # print("Transcript: ", transcript)
+            transcript_utils = transcriptUtils()
+            results = transcript_utils.search_transcript(transcript, keyword)
+            formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
+            response = {
+                "message": "Video and transcript downloaded successfully.",
+                "results": formatted_results
+            }
+            print(response)
 
-            return jsonify(result), 200
+            os.remove(filename)
+            os.remove("temp/subtitles/" + transcript)
+
+            return jsonify(response), 200
 
     @app.route("/health", methods=["GET"])
     def health_check():
@@ -115,7 +130,7 @@ def create_app():
                     with open(f"temp/subtitles/{video_title}.vtt", "w", encoding="utf-8") as file:
                         file.write(response.text)
 
-                    return True
+                    return f"{video_title}.vtt"
                 else:
                     print("Failed to fetch transcript")
                     # TODO: If not available, use NLP tools
