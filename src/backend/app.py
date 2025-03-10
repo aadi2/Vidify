@@ -6,13 +6,13 @@ import requests
 from urllib.parse import urlencode, urlparse, urlunparse, quote
 from dotenv import load_dotenv
 import re
+import whisper
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 load_dotenv()
 
-import whisper
 model = whisper.load_model("small")
 
 COOKIES_FILE = "cookies.txt"
@@ -194,7 +194,7 @@ def create_app():
 
         results = [{"timestamp": ts, "text": text} for ts, text in matches]
         return jsonify({"results": results}), 200
-    
+
     def get_video(url):
         """
         Downloads the raw YouTube video.
