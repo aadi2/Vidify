@@ -2,6 +2,12 @@ document.addEventListener("DOMContentLoaded", function() {
     const searchButton = document.getElementById("search-button");
     const searchInput = document.getElementById("search-input");
     const resultsContainer = document.getElementById("results-container");
+    const statusMessage = document.getElementById("status-message");
+    const loadingSpinner = document.getElementById("loading-spinner");
+
+
+    statusMessage.classList.remove("hidden");
+    statusMessage.textContent = "Welcome to Vidify! Please search for an item in this video.";
 
     searchButton.addEventListener("click", function() {
         const query = searchInput.value.trim();
@@ -27,7 +33,11 @@ document.addEventListener("DOMContentLoaded", function() {
             videoId: videoId,
             objectName: query
         }, (response) => {
+
+            loadingSpinner.style.display = "none"; // Hide spinner after processing
+
             if (response && response.status === "success") {
+                statusMessage.textContent = "Search completed! Results displayed below.";
                 displayResultsInPopup(response.data);
                 sendResultsToContentScript(response.data.results);
             } else {
@@ -37,45 +47,41 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
 
-/**
- * Extract YouTube video ID from URL.
- * This works both in popup context and content script context.
- */
-function extractVideoId(url) {
-    const match = url.match(/[?&]v=([^&]+)/);
-    return match ? match[1] : null;
-}
 
-/**
- * Display search results directly inside the popup.
- * @param {Object} data - Response data containing search results.
- */
-function displayResultsInPopup(data) {
-    resultsContainer.innerHTML = "<h3>Search Results:</h3>";
-
-    if (!data.results || data.results.length === 0) {
-        resultsContainer.innerHTML += `<p>No results found.</p>`;
-        return;
+    // This works both in popup context and content script context.
+    function extractVideoId(url) {
+        const match = url.match(/[?&]v=([^&]+)/);
+        return match ? match[1] : null;
     }
 
-    data.results.forEach(result => {
-        const item = document.createElement("p");
-        item.textContent = `Object: ${result.object} at ${result.timestamp}s`;
-        resultsContainer.appendChild(item);
-    });
-}
+    /**
+     * Display search results directly inside the popup.
+     * @param {Object} data - Response data containing search results.
+     */
+    function displayResultsInPopup(data) {
+        resultsContainer.innerHTML = "<h3>Search Results:</h3>";
 
-/**
- * Send results to content.js so they appear as an overlay on the video.
- */
-function sendResultsToContentScript(results) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length > 0) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-                action: "displayResults",
-                data: results
-            });
+        if (!data.results || data.results.length === 0) {
+            resultsContainer.innerHTML += `<p>No results found.</p>`;
+            return;
         }
-    });
-}
+
+        data.results.forEach(result => {
+            const item = document.createElement("p");
+            item.textContent = `Object: ${result.object} at ${result.timestamp}s`;
+            resultsContainer.appendChild(item);
+        });
+    }
+
+    // Send results to content.js so they appear as an overlay on the video.
+    function sendResultsToContentScript(results) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs.length > 0) {
+                chrome.tabs.sendMessage(tabs[0].id, {
+                    action: "displayResults",
+                    data: results
+                });
+            }
+        });
+    }
 });

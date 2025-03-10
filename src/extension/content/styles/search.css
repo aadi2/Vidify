@@ -2,7 +2,7 @@ body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
     text-align: center;
-    margin: 50px;
+    margin: 20px;
 }
 
 .search-container {
@@ -10,13 +10,16 @@ body {
     justify-content: center;
     gap: 10px;
     margin-bottom: 20px;
+    align-items: center;
 }
 
 #search-input {
     width: 300px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    padding: 12px;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
 }
 
 #search-button {
@@ -24,12 +27,42 @@ body {
     border: none;
     background-color: #007bff;
     color: white;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease-in-out;
 }
 
 #search-button:hover {
     background-color: #0056b3;
+}
+
+#status-message {
+    font-size: 16px;
+    color: #333;
+    margin-top: 10px;
+    font-weight: bold;
+    text-align: center;
+}
+
+#loading-spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #007bff;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+    display: none; 
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.hidden {
+    display: none;
 }
 
 #results-container {
