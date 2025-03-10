@@ -7,7 +7,7 @@ import time
 
 def backend():
     subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "-r", "src/backend/requirements.txt"]
+        [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]
     )
     p = subprocess.Popen([sys.executable, "src/backend/app.py"])
     time.sleep(10)
