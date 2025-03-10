@@ -3,12 +3,14 @@ import os
 import yt_dlp
 import requests
 from utils.transcriptUtils import transcriptUtils
+from flask_cors import CORS
 
 COOKIES_FILE = "cookies.txt"
 
 
 def create_app():
     app = Flask(__name__)
+    CORS(app)
 
     @app.route("/", methods=["GET"])
     def home():
