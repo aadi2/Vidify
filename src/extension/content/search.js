@@ -4,50 +4,60 @@ document.addEventListener("DOMContentLoaded", function() {
     const resultsContainer = document.getElementById("results-container");
     const statusMessage = document.getElementById("status-message");
     const loadingSpinner = document.getElementById("loading-spinner");
+    const searchModeToggle = document.getElementById("search-mode-toggle");
+    const modeLabel = document.getElementById("mode-label");
+    const darkModeToggle = document.getElementById("dark-mode-toggle")
 
 
     statusMessage.classList.remove("hidden");
-    statusMessage.textContent = "Welcome to Vidify! Please search for an item in this video.";
+    statusMessage.textContent = "Welcome to Vidify! Start searching...";
 
     searchButton.addEventListener("click", async function() {
         const query = searchInput.value.trim();
-        
+    
         if (query === "") {
             alert("Please enter a search term.");
             return;
         }
 
-        // Attempt to extract videoId from the current tab's URL
-      // NOTE: Because this is the popup, we need to query the active tab:
-      
         // Placeholder for search logic
         resultsContainer.innerHTML = `<p>Searching for "${query}" in the video...</p>`;
+
+        loadingSpinner.style.display = "block";
+
         // Send message to background.js to perform object search (you could change this to support transcript search too)
         const videoId = await getActiveTabUrl();
-        console.log("Extracted Video URL:", videoId);
-
         if (!videoId) {
             alert("Could not detect a video ID. Please make sure you're on a YouTube video page.");
+            loadingSpinner.style.display = "none";
             return;
         }
         try {
             const response = await chrome.runtime.sendMessage({
-                action: "searchTranscript",
+                action: searchModeToggle.checked ? "searchObjects" : "searchTranscript",
                 videoId: videoId,
                 searchTerm: query
             });
+            loadingSpinner.style.display = "none";
+
             if (response && response.status === 'success' && response.data) {
                 displayResultsInPopup(response.data);
-                //sendResultsToContentScript(response.data.results);
             } else {
                 resultsContainer.innerHTML = `<p style="color: red;">Search failed: ${response || "Unknown error"}</p>`;
             }
             console.log(response);
-        
         } catch (error) {
             console.error('Error during search:', error);
             resultsContainer.innerHTML = `<p style="color: red;">Search failed: ${error.message || "Unknown error"}</p>`;
         }
+    });
+
+    searchModeToggle.addEventListener("change", function() {
+        modeLabel.textContent = searchModeToggle.checked ? "Object Detection" : "Transcript Search";
+    });
+
+    darkModeToggle.addEventListener("change", function() {
+        document.body.classList.toggle("dark-mode", darkModeToggle.checked);
     });
 
     async function getActiveTabUrl() {
@@ -67,14 +77,11 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function displayResultsInPopup(data) {
-        //const resultsContainer = document.getElementById("results-container");
         resultsContainer.innerHTML = "<h3>Search Results:</h3>";
-    
         if (!data.results || data.results.length === 0) {
             resultsContainer.innerHTML += `<p>No results found.</p>`;
             return;
         }
-    
         data.results.forEach(result => {
             const item = document.createElement("p");
             item.textContent = `${result.text} at ${result.timestamp}s`;

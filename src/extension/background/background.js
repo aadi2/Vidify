@@ -1,4 +1,4 @@
-const API_URL = ""
+const API_URL = "https://vidify-378225991600.us-central1.run.app"
 
 // Automatically trigger authentication when the extension is installed or started.
 chrome.runtime.onInstalled.addListener(() => {
