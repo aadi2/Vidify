@@ -8,35 +8,16 @@
 </head>
 <body>
 
-    <div class="vidify-dropdown">
-        <div class="vidify-header">
-            <h1>Vidify</h1>
-            <label class="toggle-switch">
-                <input type="checkbox" id="dark-mode-toggle">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="search-container">
-            <input type="text" id="search-input" placeholder="Search for an object in the video..." />
-            <button id="search-button">Search</button>
-        </div>
-
-        <div class="toggle-container">
-            <label class="switch">
-                <input type="checkbox" id="search-mode-toggle">
-                <span class="slider"></span>
-            </label>
-            <span id="mode-label">Transcript Search</span>
-        </div>
-    
-        <div id="status-message" class="hidden">Welcome to Vidify! Start searching...</div>
-
-        <div id="loading-spinner" class="hidden"></div>
-
-        <div id="results-container"></div> 
-
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Search for an object in the video..." />
+        <button id="search-button">Search</button>
     </div>
+
+    <div id="status-message" class="hidden">Welcome to Vidify! Please search for an item in this video.</div>
+    <div id="loading-spinner" class="hidden"></div>
+    <div id="results-container"></div> 
+
     <script src="../search.js"></script>
 </body>
 </html>
+
