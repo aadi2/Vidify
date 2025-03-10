@@ -97,13 +97,13 @@ class VideoTestSuite(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("invalid video url", response.text.lower())
 
-    @pytest.mark.skip(reason="Have to fix cookies first. Avoiding blocking the development.")
     def test_malformed_url(self):
         """Expect 400 for a completely invalid/malformed URL."""
         response = requests.get(f"{BASE_URL}/?hash_id={self.malformed_url}")
         self.assertEqual(response.status_code, 400)
         self.assertIn("invalid video url", response.text.lower())
 
+    @pytest.mark.skip(reason="Have to fix cookies first. Avoiding blocking the development.")
     def test_no_transcript_url(self):
         """If the video doesn't have an English transcript, expect 404."""
         response = requests.get(f"{BASE_URL}/?hash_id={self.no_transcript_url}")
