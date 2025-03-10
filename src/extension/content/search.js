@@ -16,8 +16,7 @@ document.addEventListener("DOMContentLoaded", function() {
       
         // Placeholder for search logic
         resultsContainer.innerHTML = `<p>Searching for "${query}" in the video...</p>`;
-        //( async () => {
-            // Send message to background.js to perform object search (you could change this to support transcript search too)
+        // Send message to background.js to perform object search (you could change this to support transcript search too)
         const videoId = await getActiveTabUrl();
         console.log("Extracted Video URL:", videoId);
 
@@ -43,21 +42,6 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error('Error during search:', error);
             resultsContainer.innerHTML = `<p style="color: red;">Search failed: ${error.message || "Unknown error"}</p>`;
         }
-        //})();
-        /*
-        chrome.runtime.sendMessage({
-            action: "searchTranscript",
-            videoId: videoId,
-            searchTerm: query
-        }, (response) => {
-            console.log(`Response:`, response);
-            if (response && response.data) {
-                displayResultsInPopup(response.data);
-                sendResultsToContentScript(response.data.results);
-            } else {
-                resultsContainer.innerHTML = `<p style="color: red;">Search failed: ${response?.message || "Unknown error"}</p>`;
-            }
-        });*/
     });
 
     async function getActiveTabUrl() {
@@ -138,4 +122,3 @@ function sendResultsToContentScript(results) {
         }
     });
 }
-//});

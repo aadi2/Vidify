@@ -31,10 +31,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     try {
         switch (request.action) {
-            //case "searchObject":
-                //await handleObjectSearch(request.videoId, request.objectName, sendResponse);
-                //break;
-
             case "searchTranscript":
                 handleTranscriptSearch(request.videoId, request.searchTerm).then((response) => sendResponse(response))
                 return true;
@@ -106,52 +102,6 @@ async function authenticatedFetch(url, payload) {
     });
     return response.json();
 }
-
-/**
- * Handles object detection search by making an API call to the backend.
- * @param {string} videoId - YouTube video ID
- * @param {string} objectName - Name of the object to search for
- * @param {function} sendResponse - Function to send response back to the caller
-
-async function handleObjectSearch(videoId, objectName, sendResponse) {
-    const finalVideoId = await getCurrentVideoId(videoId);
-
-    if (!finalVideoId) {
-        sendResponse({ status: "error", message: "No video detected or provided" });
-        return;
-    }
-
-    try {
-        console.log(`Searching for object: ${objectName} in video: ${finalVideoId}`);
-        
-        const apiUrl = `http://localhost:5000/search/object`;
-
-        const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ videoId: finalVideoId, objectName })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            if (validateObjectSearchResponse(result)) {
-                console.log("Object detection successful:", result);
-                sendResponse({ status: "success", data: result });
-            } else {
-                throw new Error("Response schema validation failed.");
-            }
-        } else {
-            throw new Error(result.message || "Object detection failed.");
-        }
-    } catch (error) {
-        console.error("Object search error:", error);
-        sendResponse({ status: "error", message: error.message });
-    }
-}
-*/
 
 /**
  * Handles transcript search by making an API call to the backend.
@@ -274,18 +224,3 @@ async function fetchFromSPI(endpoint, payload, sendResponse) {
         sendResponse({ status: "error", message: error.message });
     }
 }
-
-/**
- * Optional: Validates the schema of the object search response.
- 
-function validateObjectSearchResponse(data) {
-    // Example schema validation
-    return (
-        Array.isArray(data.results) &&
-        data.results.every(item =>
-            typeof item.timestamp === 'string' &&
-            typeof item.confidence === 'number'
-        )
-    );
-}
-*/
