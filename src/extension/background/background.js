@@ -1,39 +1,12 @@
-
-const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
-const REDIRECT_URL = chrome.identity.getRedirectURL();
-const CLIENT_ID = "378225991600-ni4cvnivl55g4jbjo1no4de2qaks604b.apps.googleusercontent.com";
-
-const OAUTH_PARAMS = {
-    client_id: CLIENT_ID,
-    response_type: "token",
-    redirect_uri: REDIRECT_URL,
-    scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email"
-};
-
-/**
- * Ensures the user is authenticated.
- * If no access token is found, automatically initiates OAuth.
- */
-function ensureAuthenticated() {
-    chrome.storage.local.get(["accessToken"], (result) => {
-      if (!result.accessToken) {
-        console.log("No access token found, initiating authentication.");
-        startGoogleLogin(() => {});
-      } else {
-        console.log("User already authenticated.");
-      }
-    });
-  }
-
 // Automatically trigger authentication when the extension is installed or started.
 chrome.runtime.onInstalled.addListener(() => {
     console.log("Vidify extension installed and ready!");
-    ensureAuthenticated();
+    //ensureAuthenticated();
   });
   
   chrome.runtime.onStartup.addListener(() => {
     console.log("Vidify extension started.");
-    ensureAuthenticated();
+    //ensureAuthenticated();
   });
 
 // Detect YouTube video URL and store videoId in chrome.storage.local
@@ -56,13 +29,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     try {
         switch (request.action) {
-            case "login":
-                startGoogleLogin(sendResponse);
-                break;
-
-            case "searchObject":
-                await handleObjectSearch(request.videoId, request.objectName, sendResponse);
-                break;
+            //case "searchObject":
+                //await handleObjectSearch(request.videoId, request.objectName, sendResponse);
+                //break;
 
             case "searchTranscript":
                 await handleTranscriptSearch(request.videoId, request.searchTerm, sendResponse);
@@ -88,57 +57,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     // Required to keep the sendResponse callback open for asynchronous use
     return true;
 });
-
-/**
- * Initiates Google OAuth authentication using Chrome Identity API.
- */
-function startGoogleLogin(sendResponse) {
-    const authUrl = `${GOOGLE_AUTH_URL}?${new URLSearchParams(OAUTH_PARAMS)}`;
-
-    chrome.identity.launchWebAuthFlow(
-        { url: authUrl, interactive: true },
-        (redirectUrl) => {
-            if (chrome.runtime.lastError) {
-                console.error("OAuth failed:", chrome.runtime.lastError);
-                sendResponse({ status: "error", message: chrome.runtime.lastError.message });
-                return;
-            }
-
-            if (redirectUrl) {
-                // Extract access token from the redirect URL
-                const urlParams = new URLSearchParams(new URL(redirectUrl).hash.substring(1));
-                const accessToken = urlParams.get("access_token");
-
-                if (accessToken) {
-                    console.log("OAuth successful, token:", accessToken);
-                    chrome.storage.local.set({ accessToken }, () => {
-                        console.log("Access token saved.");
-                    });
-                    verifyTokenWithBackend(accessToken);
-                    sendResponse({ status: "success", message: "Logged in successfully" });
-                }
-            }
-        }
-    );
-}
-
-/**
- * Sends the access token to your Flask backend for verification.
- */
-function verifyTokenWithBackend(accessToken) {
-    fetch("http://localhost:8001/verify-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accessToken })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log("Token verification response:", data);
-    })
-    .catch(error => {
-        console.error("Error verifying token:", error);
-    });
-}
 
 /**
  * Checks if a URL is a YouTube video URL.
@@ -191,7 +109,7 @@ async function authenticatedFetch(url, payload) {
  * @param {string} videoId - YouTube video ID
  * @param {string} objectName - Name of the object to search for
  * @param {function} sendResponse - Function to send response back to the caller
- */
+
 async function handleObjectSearch(videoId, objectName, sendResponse) {
     const finalVideoId = await getCurrentVideoId(videoId);
 
@@ -230,6 +148,7 @@ async function handleObjectSearch(videoId, objectName, sendResponse) {
         sendResponse({ status: "error", message: error.message });
     }
 }
+*/
 
 /**
  * Handles transcript search by making an API call to the backend.
@@ -239,38 +158,47 @@ async function handleObjectSearch(videoId, objectName, sendResponse) {
  */
 async function handleTranscriptSearch(videoId, searchTerm, sendResponse) {
     const finalVideoId = await getCurrentVideoId(videoId);
-
+  
     if (!finalVideoId) {
-        sendResponse({ status: "error", message: "No video detected or provided" });
-        return;
+      sendResponse({ status: "error", message: "No video detected or provided" });
+      return;
     }
-
+  
     try {
-        console.log(`Searching for term: ${searchTerm} in video: ${finalVideoId}`);
-
-        const apiUrl = `http://localhost:5000/search/transcript`;
-
-        const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ videoId: finalVideoId, searchTerm })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            console.log("Transcript search successful:", result);
-            sendResponse({ status: "success", data: result });
-        } else {
-            throw new Error(result.message || "Transcript search failed.");
-        }
+      console.log(`Searching for term: ${searchTerm} in video: ${finalVideoId}`);
+  
+      const apiUrl = `http://localhost:5000/search/transcript`;
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ videoId: finalVideoId, searchTerm })
+      });
+  
+      console.log("HTTP Status:", response.status, response.statusText);
+      const rawText = await response.text();
+      console.log("Raw response text:", rawText);
+  
+      let result;
+      try {
+        result = JSON.parse(rawText);
+      } catch (parseError) {
+        throw new Error(`Failed to parse JSON response: ${rawText}`);
+      }
+  
+      if (response.ok) {
+        console.log("Transcript search successful:", result);
+        sendResponse({ status: "success", data: result });
+      } else {
+        throw new Error(result.message || `Transcript search failed with status ${response.status} ${response.statusText}`);
+      }
     } catch (error) {
-        console.error("Transcript search error:", error);
-        sendResponse({ status: "error", message: error.message });
+      console.error("Transcript search error:", error);
+      sendResponse({ status: "error", message: error.message });
     }
-}
+  }
+  
 
 /**
  * Handles retrieval of the user's search history from Chrome storage.
@@ -342,7 +270,7 @@ async function fetchFromSPI(endpoint, payload, sendResponse) {
 
 /**
  * Optional: Validates the schema of the object search response.
- */
+ 
 function validateObjectSearchResponse(data) {
     // Example schema validation
     return (
@@ -353,3 +281,4 @@ function validateObjectSearchResponse(data) {
         )
     );
 }
+*/

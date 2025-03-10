@@ -11,7 +11,14 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        const videoId = extractVideoId(window.location.href);
+        // Attempt to extract videoId from the current tab's URL
+      // NOTE: Because this is the popup, we need to query the active tab:
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || !tabs.length) {
+          alert("No active tab found.");
+          return;
+        }
+        const videoId = extractVideoId(tabs[0].url);
 
         if (!videoId) {
             alert("Could not detect a video ID. Please make sure you're on a YouTube video page.");
@@ -23,9 +30,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // Send message to background.js to perform object search (you could change this to support transcript search too)
         chrome.runtime.sendMessage({
-            action: "searchObject",
+            action: "searchTranscript",
             videoId: videoId,
-            objectName: query
+            searchTerm: query
         }, (response) => {
             if (response && response.status === "success") {
                 displayResultsInPopup(response.data);
@@ -35,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     });
-
+});
 
 /**
  * Extract YouTube video ID from URL.

@@ -12,23 +12,16 @@
       "sidePanel",
       "scripting",
       "storage",
-      "activeTab",
-      "identity"
+      "activeTab"
     ],
     "host_permissions": [
       "*://*.youtube.com/*",
       "*://youtu.be/*",
       "https://api.your-backend.com/*",
       "https://accounts.google.com/o/oauth2/auth",
-      "https://www.googleapis.com/oauth2/v2/userinfo"
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+       "http://localhost:5000/*"
     ],
-    "oauth2": {
-      "client_id": "378225991600-ni4cvnivl55g4jbjo1no4de2qaks604b.apps.googleusercontent.com",
-      "scopes": [
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "https://www.googleapis.com/auth/userinfo.email"
-      ]
-    },
     "background": {
       "service_worker": "background/background.js"
     },
@@ -42,7 +35,7 @@
       }
     ],
     "action": {
-      "default_popup": "content/components/popup.html",
+      "default_popup": "content/components/search.html",
       "default_icon": {}
     }
   }

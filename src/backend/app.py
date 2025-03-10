@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, redirect, session
+from flask_cors import CORS
 import os
 import yt_dlp
 import requests
@@ -9,14 +10,16 @@ import re
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-
 load_dotenv()
+
+import whisper
+model = whisper.load_model("small")
 
 COOKIES_FILE = "cookies.txt"
 
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-REDIRECT_URI = os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:8001/oauth/callback')
+REDIRECT_URI = os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:5000/oauth/callback')
 SCOPE = 'https://www.googleapis.com/auth/youtube.readonly'
 
 # Simple in-memory storage (replace with a database for production)
@@ -44,6 +47,7 @@ def sanitize_url(url):
 
 def create_app():
     app = Flask(__name__)
+    CORS(app)
     app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super-secret-key')
 
     # Set up rate limiting: 10 requests per minute by default
@@ -120,15 +124,7 @@ def create_app():
         else:
             return jsonify({"error": "Invalid token"}), 401
 
-    def validate_and_log_video_id(request_data):
-        """Helper to extract and validate videoId from request JSON."""
-        video_id = request_data.get("videoId")
-        if not video_id:
-            return None, jsonify({"error": "Missing videoId"}), 400
-
-        app.logger.info(f"Processing request for video ID: {video_id}")
-        return video_id, None, None
-
+    # Home route for video & transcript download (existing functionality)
     @app.route("/", methods=["GET"])
     @limiter.limit("10 per minute")
     def home():
@@ -164,6 +160,41 @@ def create_app():
         result = {"message": "Video and transcript downloaded successfully."}
         return jsonify(result), 200
 
+    # Route for transcript search integrating transcriptUtils.py
+    @app.route("/search/transcript", methods=["POST"])
+    def search_transcript():
+        data = request.json or {}
+        video_id = data.get("videoId")
+        yt_url = data.get("ytUrl")       # Expect full YouTube URL
+        search_term = data.get("searchTerm")
+
+        if not yt_url or not video_id or not search_term:
+            return jsonify({"error": "Missing one of ytUrl, videoId, or searchTerm"}), 400
+
+        # Import transcriptUtils (adjust the import if needed)
+        from backend.utils.transcriptUtils import transcriptUtils
+        t_utils = transcriptUtils()
+        vtt_filename = f"{video_id}.vtt"
+        vtt_path = os.path.join("temp/subtitles", vtt_filename)
+
+        # Create the transcript if it doesn't exist
+        if not os.path.exists(vtt_path):
+            created_file = t_utils.create_transcript(yt_url, video_id, model)
+            if not created_file:
+                return jsonify({"error": "Failed to create transcript"}), 500
+            # Rename if the created file doesn't match our expected path
+            if created_file != vtt_path:
+                os.rename(created_file, vtt_path)
+
+        # Attempt to search the transcript; catch exceptions to prevent "Unknown error"
+        try:
+            matches = t_utils.search_transcript(vtt_filename, search_term)
+        except Exception as e:
+            return jsonify({"error": f"Transcript search error: {str(e)}"}), 500
+
+        results = [{"timestamp": ts, "text": text} for ts, text in matches]
+        return jsonify({"results": results}), 200
+    
     def get_video(url):
         """
         Downloads the raw YouTube video.
@@ -270,7 +301,7 @@ if __name__ == "__main__":
         os.makedirs("temp")
 
     app = create_app()
-    app.run(port=8001, host='127.0.0.1', debug=True,
+    app.run(port=5000, host='127.0.0.1', debug=True,
             use_evalex=False, use_reloader=False)
     # app.run(port=8080, host='0.0.0.0', debug=True,
     #         use_evalex=False, use_reloader=False)
