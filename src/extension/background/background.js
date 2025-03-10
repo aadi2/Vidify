@@ -1,3 +1,4 @@
+
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const REDIRECT_URL = chrome.identity.getRedirectURL();
 const CLIENT_ID = "378225991600-ni4cvnivl55g4jbjo1no4de2qaks604b.apps.googleusercontent.com";
@@ -9,10 +10,31 @@ const OAUTH_PARAMS = {
     scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email"
 };
 
-// When the extension is installed or updated
+/**
+ * Ensures the user is authenticated.
+ * If no access token is found, automatically initiates OAuth.
+ */
+function ensureAuthenticated() {
+    chrome.storage.local.get(["accessToken"], (result) => {
+      if (!result.accessToken) {
+        console.log("No access token found, initiating authentication.");
+        startGoogleLogin(() => {});
+      } else {
+        console.log("User already authenticated.");
+      }
+    });
+  }
+
+// Automatically trigger authentication when the extension is installed or started.
 chrome.runtime.onInstalled.addListener(() => {
     console.log("Vidify extension installed and ready!");
-});
+    ensureAuthenticated();
+  });
+  
+  chrome.runtime.onStartup.addListener(() => {
+    console.log("Vidify extension started.");
+    ensureAuthenticated();
+  });
 
 // Detect YouTube video URL and store videoId in chrome.storage.local
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
