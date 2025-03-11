@@ -22,16 +22,14 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-          pip install -r src/backend/requirements.txt
-          pip install -r requirements-dev.txt
+          pip install -r requirements.txt
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           python -m venv venv
           venv\Scripts\activate
-          pip install -r src/backend/requirements.txt
-          pip install -r requirements-dev.txt
+          pip install -r requirements.txt
 
       - name: Run linter (Linux & macOS)
         if: runner.os != 'Windows'
@@ -53,7 +51,7 @@ jobs:
       - name: Set PYTHONPATH (Windows)
         if: runner.os == 'Windows'
         run: |
-           $env:PYTHONPATH += ";$pwd"
+          $env:PYTHONPATH += ";$pwd"
 
       - name: Setup YouTube Cookies (Linux & macOS)
         if: runner.os != 'Windows'
