@@ -1,7 +1,6 @@
 name: CI Pipeline
 on:
   push:
-    branches: [main, master, develop]
     paths-ignore:
       - '**.md'
       - 'docs/**'
