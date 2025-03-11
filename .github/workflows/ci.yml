@@ -1,5 +1,15 @@
 name: CI Pipeline
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, master, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [main, master, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
 jobs:
   build:
@@ -7,7 +17,80 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+      # Fail-fast: false ensures all environments are tested even if one fails
+      fail-fast: false
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      # Use caching for faster dependency installation
+      - name: Set up Python with caching
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
+
+      # Use conditional shell commands with a single setup step
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          ${{ runner.os == 'Windows' && 'venv\Scripts\activate' || 'source venv/bin/activate' }}
+          pip install --no-cache-dir -r requirements.txt
+
+      # Set PYTHONPATH once for all platforms
+      - name: Set PYTHONPATH
+        shell: bash
+        run: |
+          echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
+
+      # Setup YouTube Cookies for all platforms
+      - name: Setup YouTube Cookies
+        shell: bash
+        env:
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+        run: |
+          echo "$YT_COOKIES" > cookies.txt
+
+      # Run linter with faster config
+      - name: Run linter
+        run: |
+          ${{ runner.os == 'Windows' && 'venv\Scripts\activate' || 'source venv/bin/activate' }}
+          flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      # Run tests with optimized coverage settings
+      - name: Run tests with coverage
+        run: |
+          ${{ runner.os == 'Windows' && 'venv\Scripts\activate' || 'source venv/bin/activate' }}
+          pytest --cov=src --cov-report=xml --cov-branch
+
+      # Upload coverage report for later analysis
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report-${{ matrix.os }}
+          path: coverage.xml
+          retention-days: 7
+
+      # Run build script
+      - name: Run build.py
+        run: |
+          ${{ runner.os == 'Windows' && 'venv\Scripts\activate' || 'source venv/bin/activate' }}
+          python src/build.py
+
+      # Upload build artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ matrix.os }}
+          path: build/
+          retention-days: 7
+
+  # New job for security scanning
+  security:
+    needs: build
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -16,76 +99,22 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+          cache: 'pip'
 
-      - name: Install dependencies (Linux & macOS)
-        if: runner.os != 'Windows'
+      - name: Install security tools
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
+          python -m pip install bandit safety
 
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
+      - name: Run security scan
         run: |
-          python -m venv venv
-          venv\Scripts\activate
-          pip install -r requirements.txt
+          bandit -r src/ -f json -o security-report.json
+          safety check -r requirements.txt --json > safety-report.json
 
-      - name: Run linter (Linux & macOS)
-        if: runner.os != 'Windows'
-        run: |
-          source venv/bin/activate
-          flake8 src/
-
-      - name: Run linter (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          venv\Scripts\activate
-          flake8 src/
-
-      - name: Set PYTHONPATH (Linux & macOS)
-        if: runner.os != 'Windows'
-        run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-
-      - name: Set PYTHONPATH (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          $env:PYTHONPATH += ";$pwd"
-
-      - name: Setup YouTube Cookies (Linux & macOS)
-        if: runner.os != 'Windows'
-        env:
-          YT_COOKIES: ${{ secrets.YT_COOKIES }}
-        run: echo "$YT_COOKIES" > cookies.txt
-
-      - name: Setup YouTube Cookies (Windows)
-        if: runner.os == 'Windows'
-        env:
-          YT_COOKIES: ${{ secrets.YT_COOKIES }}
-        run: |
-          echo $env:YT_COOKIES | Set-Content -Path cookies.txt -Encoding UTF8
-
-      - name: Run tests with coverage (Linux & macOS)
-        if: runner.os != 'Windows'
-        run: |
-          source venv/bin/activate
-          pytest --cov=src
-
-      - name: Run tests with coverage (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          venv\Scripts\activate
-          pytest --cov=src
-
-      - name: Run build.py (Linux & macOS)
-        if: runner.os != 'Windows'
-        run: |
-          source venv/bin/activate
-          python src/build.py
-
-      - name: Run build.py (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          venv\Scripts\activate
-          python src/build.py
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            security-report.json
+            safety-report.json
+          retention-days: 7
