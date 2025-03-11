@@ -95,8 +95,16 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     
         data.results.forEach(result => {
-            const item = document.createElement("p");
-            item.textContent = `${result.text} at ${result.timestamp}s`;
+            const item = document.createElement("div");
+            item.className = "result-item";
+    
+            // Highlight keyword
+            let highlightedText = result.text.replace(
+                new RegExp(searchInput.value, "gi"),
+                (match) => `<span class="result-highlight">${match}</span>`
+            );
+    
+            item.innerHTML = `${highlightedText} at <strong>${result.timestamp}s</strong>`;
             resultsContainer.appendChild(item);
         });
     }

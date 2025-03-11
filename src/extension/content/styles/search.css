@@ -156,3 +156,19 @@ body {
     background-color: #007bff;
     transition: width 0.3s ease-in-out;
 }
+
+.result-item {
+    padding: 10px;
+    border-bottom: 1px solid #8a8a8a; /* divider */
+    text-align: left;
+}
+
+.result-item:last-child {
+    border-bottom: none; 
+}
+
+.result-highlight {
+    font-weight: bold;
+    text-decoration: underline;
+    color: #d9534f; 
+}
