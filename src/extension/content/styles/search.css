@@ -41,8 +41,8 @@ body {
 }
 
 #status-message {
-    font-size: 16px;
-    color: #333;
+    font-size: 15px;
+    color: #000000;
     margin-top: 10px;
     font-weight: bold;
     text-align: center;
@@ -116,19 +116,26 @@ body {
 }
 
 #loading-spinner {
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #007bff;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    width: 27px;
+    height: 27px;
+    margin: 15px auto;
+}
+
+.loading-logo {
+    width: 100%;
+    height: auto;
+}
+
+.rotating {
     animation: spin 1s linear infinite;
-    margin: 20px auto;
-    display: none; 
 }
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    100% { transform: rotate(-360deg); }
 }
 
 .hidden {
@@ -139,7 +146,6 @@ body {
     margin-top: 20px;
 }
 
-/* Progress Bar */
 .progress-container {
     width: 80%;
     background-color: #ddd;
@@ -171,4 +177,23 @@ body {
     font-weight: bold;
     text-decoration: underline;
     color: #d9534f; 
+}
+
+.logo-container {
+    display: flex;
+    justify-content: center;
+    margin-top: -10px;
+    margin-bottom: 5px;
+}
+
+.vidify-logo {
+    width: 55px;
+    height: auto;
+    transition: transform 0.3s ease-in-out;
+    opacity: 0.9;
+}
+
+.vidify-logo:hover {
+    opacity: 1;
+    transform: scale(1.1);
 }

@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     statusMessage.classList.remove("hidden");
-    statusMessage.textContent = "Welcome to Vidify! Please search for an item in this video.";
+    statusMessage.textContent = "Welcome to Vidify! Please search using a keyword...";
 
     darkModeToggle.addEventListener("change", function() {
         document.body.classList.toggle("dark-mode", darkModeToggle.checked);
@@ -29,11 +29,14 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         statusMessage.textContent = `Searching for "${query}"...`;
-        loadingSpinner.style.display = "block";
+
+        loadingSpinner.style.display = "flex"; 
+        loadingSpinner.classList.add("rotating");
+
         document.querySelector(".progress-container").style.display = "block"; 
         updateProgressBar(0);
         setTimeout(() => {
-            updateProgressBar(10); // Move to 100% after 1.5 seconds
+            updateProgressBar(10); // Move to 10% after 1.5 seconds
         }, 1500);
         resultsContainer.innerHTML = ""; 
 
@@ -44,6 +47,9 @@ document.addEventListener("DOMContentLoaded", function() {
             alert("Could not detect a video ID. Please make sure you're on a YouTube video page.");
             return;
         }
+        setTimeout(() => {
+            updateProgressBar(60); // Move to 10% after 1.5 seconds
+        }, 5000);
         try {
             const response = await chrome.runtime.sendMessage({
                 action: searchModeToggle.checked ? "searchObjects" : "searchTranscript",
@@ -51,13 +57,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 searchTerm: query
             });
             
-            updateProgressBar(60); // Move to 60% after search completes
-            updateProgressBar(100); // Move to 100% after 1.5 seconds
+            updateProgressBar(100); 
             setTimeout(() => {
                 document.querySelector(".progress-container").style.display = "none"; // Hide bar
             }, 500);
 
-            loadingSpinner.style.display = "none"; // Hide spinner after search
+            loadingSpinner.classList.remove("rotating"); 
+            loadingSpinner.style.display = "none"; 
 
             if (response && response.status === 'success' && response.data) {
                 statusMessage.textContent = "Search complete!";
@@ -87,7 +93,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function displayResultsInPopup(data) {
-        resultsContainer.innerHTML = "<h3>Results:</h3>";
+        resultsContainer.innerHTML = `<h3>Results:</h3>`;
     
         if (!data.results || data.results.length === 0) {
             resultsContainer.innerHTML += `<p>No results found.</p>`;
