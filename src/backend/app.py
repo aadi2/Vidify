@@ -31,7 +31,7 @@ def create_app():
         elif not transcript:
             result = {"message": "Not able to fetch transcript.",
                       "results": None}
-            
+
             os.remove(filename)
 
             return jsonify(result), 404
