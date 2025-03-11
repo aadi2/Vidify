@@ -4,9 +4,21 @@ document.addEventListener("DOMContentLoaded", function() {
     const resultsContainer = document.getElementById("results-container");
     const statusMessage = document.getElementById("status-message");
     const loadingSpinner = document.getElementById("loading-spinner");
+    const searchModeToggle = document.getElementById("search-mode-toggle");
+    const modeLabel = document.getElementById("mode-label");
+    const darkModeToggle = document.getElementById("dark-mode-toggle");
+
 
     statusMessage.classList.remove("hidden");
     statusMessage.textContent = "Welcome to Vidify! Please search for an item in this video.";
+
+    darkModeToggle.addEventListener("change", function() {
+        document.body.classList.toggle("dark-mode", darkModeToggle.checked);
+    });
+
+    searchModeToggle.addEventListener("change", function() {
+        modeLabel.textContent = searchModeToggle.checked ? "Object Detection" : "Transcript Search";
+    });
 
     searchButton.addEventListener("click", async function() {
         const query = searchInput.value.trim();
@@ -16,7 +28,15 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        resultsContainer.innerHTML = `<p>Searching for "${query}" in the video...</p>`;
+        statusMessage.textContent = `Searching for "${query}"...`;
+        loadingSpinner.style.display = "block";
+        document.querySelector(".progress-container").style.display = "block"; 
+        updateProgressBar(0);
+        setTimeout(() => {
+            updateProgressBar(10); // Move to 100% after 1.5 seconds
+        }, 1500);
+        resultsContainer.innerHTML = ""; 
+
         const videoId = await getActiveTabUrl();
         console.log("Extracted Video URL:", videoId);
 
@@ -26,17 +46,28 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         try {
             const response = await chrome.runtime.sendMessage({
-                action: "searchTranscript",
+                action: searchModeToggle.checked ? "searchObjects" : "searchTranscript",
                 videoId: videoId,
                 searchTerm: query
             });
+            
+            updateProgressBar(60); // Move to 60% after search completes
+            updateProgressBar(100); // Move to 100% after 1.5 seconds
+            setTimeout(() => {
+                document.querySelector(".progress-container").style.display = "none"; // Hide bar
+            }, 500);
+
+            loadingSpinner.style.display = "none"; // Hide spinner after search
+
             if (response && response.status === 'success' && response.data) {
+                statusMessage.textContent = "Search complete!";
                 displayResultsInPopup(response.data);
             } else {
-                resultsContainer.innerHTML = `<p style="color: red;">Search failed: ${response || "Unknown error"}</p>`;
+                statusMessage.textContent = "No results found.";
             }
+
             console.log(response);
-        
+
         } catch (error) {
             console.error('Error during search:', error);
             resultsContainer.innerHTML = `<p style="color: red;">Search failed: ${error.message || "Unknown error"}</p>`;
@@ -56,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function displayResultsInPopup(data) {
-        resultsContainer.innerHTML = "<h3>Search Results:</h3>";
+        resultsContainer.innerHTML = "<h3>Results:</h3>";
     
         if (!data.results || data.results.length === 0) {
             resultsContainer.innerHTML += `<p>No results found.</p>`;
@@ -75,4 +106,8 @@ document.addEventListener("DOMContentLoaded", function() {
 function extractVideoId(url) {
     const match = url.match(/[?&]v=([^&]+)/);
     return match ? match[1] : null;
+}
+
+function updateProgressBar(value) {
+    document.getElementById("progress-bar").style.width = value + "%";
 }
