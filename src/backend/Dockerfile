@@ -1,16 +1,17 @@
 FROM python:3.9-slim
 
-WORKDIR /app
+ENV APP_HOME=/app
 
-# Copy and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR $APP_HOME
 
-# all files
+# copy all files
 COPY . .
+
+# install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # the port Flask/FastAPI runs on
 EXPOSE 8080
 
 # Run 
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]
+CMD ["flask", "--app", "app", "run", "--host=0.0.0.0", "--port=8080"]

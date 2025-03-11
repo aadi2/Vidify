@@ -1,10 +1,14 @@
 {
-    "manifest_version": 3,
-    "name": "Vidify",
-    "version": "1.1",
-    "description": "Extension allows the user to search for objects and timestamps in a YouTube video.",
-    "icons": {},
-    "side_panel": {
+  "manifest_version": 3,
+  "name": "Vidify",
+  "version": "1.0",
+  "description": "Extension allows the user to search for objects and timestamps in a YouTube video.",
+  "icons": {
+    "128": "icons/icon-128.png",
+    "48": "icons/icon-48.png",
+    "32": "icons/icon-16.png"
+  },
+  "side_panel": {
       "default_path": "content/components/search.html"
     },
     "permissions": [

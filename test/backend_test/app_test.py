@@ -14,6 +14,7 @@ class TestSuite(unittest.TestCase):
         self.invalid_url = "invalid_url"
         self.no_transcript_url = "https://www.youtube.com/watch?v=sD9gTAFDq40"
         self.valid_url = "https://www.youtube.com/watch?v=W86cTIoMv2U"
+        self.keyword = "cat"
 
         self.process = subprocess.Popen([sys.executable, "src/backend/app.py"], stdout=sys.stdout, stderr=sys.stderr)
 
@@ -27,23 +28,23 @@ class TestSuite(unittest.TestCase):
         else:
             raise RuntimeError("Flask server failed to start.")
         
-    @pytest.mark.skip(reason="Have to fix cookies first. Avoiding blocking the development.")
+    # @pytest.mark.skip(reason="Have to fix cookies first. Avoiding blocking the development.")
     def test_app(self):
         with self.subTest(key=self.invalid_url):
-            response = requests.get(f"{BASE_URL}/?hash_id={self.invalid_url}")
+            response = requests.get(f"{BASE_URL}/?yt_url={self.invalid_url}&keyword={self.keyword}")
             print(response)
             self.assertEqual(response.status_code, 404)
             self.assertIn("not able to download the video", response.text.lower())
 
         with self.subTest(key=self.no_transcript_url):
-            response = requests.get(f"{BASE_URL}/?hash_id={self.no_transcript_url}")
+            response = requests.get(f"{BASE_URL}/?yt_url={self.no_transcript_url}&keyword={self.keyword}")
             self.assertEqual(response.status_code, 404)
             self.assertIn("not able to fetch transcript", response.text.lower())
 
         with self.subTest(key=self.valid_url):
-            response = requests.get(f"{BASE_URL}/?hash_id={self.valid_url}")
+            response = requests.get(f"{BASE_URL}/?yt_url={self.valid_url}&keyword={self.keyword}")
             self.assertEqual(response.status_code, 200)
-            self.assertIn("video and transcript download successfully", response.text.lower())
+            self.assertIn("video and transcript downloaded successfully", response.text.lower())
 
 
     def tearDown(self):
