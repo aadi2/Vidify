@@ -122,15 +122,6 @@ function extractVideoId(url) {
     return match ? match[1] : null;
 }
 
-
-
-
-
-
-
-
-
-
 function updateProgressBar(value) {
     document.getElementById("progress-bar").style.width = value + "%";
 }
