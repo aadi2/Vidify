@@ -2,7 +2,7 @@ FROM python:3.9-slim
 
 ENV APP_HOME=/app
 
-WORKDIR $APP_H ME
+WORKDIR $APP_HOME
 
 # copy all files
 COPY . .
