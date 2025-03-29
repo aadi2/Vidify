@@ -1,0 +1,8 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.15  # You can use the latest stable version (check releases)
+    hooks:
+      - id: ruff
+        args: [--fix]  # Automatically fix issues when possible
+      - id: ruff-format
