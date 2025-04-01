@@ -25,4 +25,8 @@ source venv/bin/activate
 python src/build.py
 deactivate
 
+Must run THESE 2 COMMANDS locally:
+pip install pre-commit
+pre-commit install
+
 We're so back.
