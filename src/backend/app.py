@@ -1,24 +1,277 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, redirect, session, url_for
 import os
 import yt_dlp
 import requests
+import datetime
+import logging
+import json
+import secrets
+import re
+from functools import wraps
 from utils.transcriptUtils import transcriptUtils
+from utils.url_validator import is_valid_youtube_url, extract_video_id
 from flask_cors import CORS
+from dotenv import load_dotenv
+from authlib.integrations.flask_client import OAuth
+from authlib.common.security import generate_token
+
+# Load environment variables
+load_dotenv()
 
 COOKIES_FILE = "cookies.txt"
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("auth.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("auth")
 
 
 def create_app():
     app = Flask(__name__)
     CORS(app)
+    
+    # Set up secure session with a random secret key
+    app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(24))
+    
+    # Session configuration
+    app.config.update(
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+    )
+    
+    # OAuth configuration
+    app.config['GOOGLE_CLIENT_ID'] = os.getenv('GOOGLE_CLIENT_ID')
+    app.config['GOOGLE_CLIENT_SECRET'] = os.getenv('GOOGLE_CLIENT_SECRET')
+    app.config['OAUTH_REDIRECT_URI'] = os.getenv('OAUTH_REDIRECT_URI')
+    app.config['VALID_EXTENSION_ID'] = os.getenv('VALID_EXTENSION_ID', 'your_chrome_extension_id')
+    
+    # Setup OAuth
+    oauth = OAuth(app)
+    oauth.register(
+        name='google',
+        client_id=app.config['GOOGLE_CLIENT_ID'],
+        client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={'scope': 'openid email profile'},
+    )
+    
+    # User auth state storage - in production, use a real database
+    user_tokens = {}
+    
+    def auth_required(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            token = None
+            
+            # Check if token is in the headers
+            if 'Authorization' in request.headers:
+                auth_header = request.headers['Authorization']
+                if auth_header.startswith('Bearer '):
+                    token = auth_header.split('Bearer ')[1]
+            
+            if not token:
+                logger.warning(f"Access attempt without token: {request.remote_addr}")
+                return jsonify({'message': 'Authentication required'}), 401
+            
+            # Check if token is valid in our storage
+            user_id = None
+            for uid, user_data in user_tokens.items():
+                if user_data.get('access_token') == token:
+                    user_id = uid
+                    break
+            
+            if not user_id:
+                logger.warning(f"Invalid token used: {request.remote_addr}")
+                return jsonify({'message': 'Invalid or expired token'}), 401
+            
+            # Check if token is expired
+            token_data = user_tokens[user_id]
+            if datetime.datetime.utcnow() > token_data.get('expires_at', datetime.datetime.min):
+                logger.warning(f"Expired token used: {request.remote_addr}")
+                return jsonify({'message': 'Token has expired'}), 401
+            
+            return f(user_id, *args, **kwargs)
+        return decorated
+    
+    def validate_extension_request():
+        # Check if the request includes Chrome extension ID in headers
+        extension_id = request.headers.get('X-Extension-Id')
+        valid_extension_id = app.config['VALID_EXTENSION_ID']
+        
+        if not extension_id or extension_id != valid_extension_id:
+            logger.warning(f"Invalid extension ID: {extension_id} from {request.remote_addr}")
+            return False
+        return True
+
+    @app.route('/auth/login')
+    def login():
+        """
+        Initiate the Google OAuth login flow.
+        """
+        if not validate_extension_request():
+            logger.warning(f"Unauthorized login attempt from {request.remote_addr}")
+            return jsonify({"message": "Unauthorized request"}), 403
+            
+        # Generate a state parameter to prevent CSRF
+        state = generate_token(32)
+        session['oauth_state'] = state
+        
+        redirect_uri = url_for('auth_callback', _external=True)
+        return oauth.google.authorize_redirect(redirect_uri, state=state)
+    
+    @app.route('/auth/callback')
+    def auth_callback():
+        """
+        Callback endpoint for OAuth2 authorization.
+        """
+        try:
+            # Verify the state parameter
+            if 'oauth_state' not in session or request.args.get('state') != session['oauth_state']:
+                logger.warning(f"Invalid OAuth state from {request.remote_addr}")
+                return jsonify({"message": "Invalid state parameter"}), 403
+            
+            # Get the authorization token
+            token = oauth.google.authorize_access_token()
+            if not token:
+                logger.error(f"Failed to get access token from {request.remote_addr}")
+                return jsonify({"message": "Authentication failed"}), 401
+                
+            # Get user info from Google
+            user_info = oauth.google.parse_id_token(token)
+            user_id = user_info.get('sub')  # Google's unique user ID
+            
+            if not user_id:
+                logger.error(f"Failed to get user ID from token")
+                return jsonify({"message": "Authentication failed"}), 401
+                
+            # Generate our own access token for the extension
+            access_token = generate_token(32)  # Generate a random token
+            expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+            
+            # Store the token with user information (in production, use a database)
+            user_tokens[user_id] = {
+                'access_token': access_token,
+                'user_info': user_info,
+                'expires_at': expires_at
+            }
+            
+            # Create a response page that will send the token back to the extension
+            logger.info(f"Authentication successful for user: {user_info.get('email')}")
+            
+            # Return a page that will post the token back to the extension
+            return f"""
+            <html>
+            <head>
+                <title>Authentication Successful</title>
+                <script>
+                    window.onload = function() {{
+                        // Post the token back to the extension
+                        window.opener.postMessage({{
+                            type: 'vidify_auth_token',
+                            token: '{access_token}',
+                            expires_at: '{expires_at.isoformat()}'
+                        }}, '*');
+                        // Close this window
+                        window.close();
+                    }};
+                </script>
+            </head>
+            <body>
+                <h1>Authentication Successful!</h1>
+                <p>You can close this window and return to the extension.</p>
+            </body>
+            </html>
+            """
+            
+        except Exception as e:
+            logger.error(f"Authentication error: {str(e)}")
+            return jsonify({"message": "Authentication failed"}), 500
+    
+    @app.route("/auth/validate", methods=["GET"])
+    def validate_token():
+        """
+        Validate if a token is still valid
+        """
+        token = None
+        
+        # Check if token is in the headers
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split('Bearer ')[1]
+        
+        if not token:
+            return jsonify({'valid': False, 'message': 'No token provided'}), 401
+        
+        # Check if token exists in our storage
+        user_id = None
+        for uid, user_data in user_tokens.items():
+            if user_data.get('access_token') == token:
+                user_id = uid
+                break
+        
+        if not user_id:
+            return jsonify({'valid': False, 'message': 'Invalid token'}), 401
+        
+        # Check if token is expired
+        token_data = user_tokens[user_id]
+        if datetime.datetime.utcnow() > token_data.get('expires_at', datetime.datetime.min):
+            return jsonify({'valid': False, 'message': 'Token expired'}), 401
+        
+        # Token is valid
+        user_info = token_data.get('user_info', {})
+        return jsonify({
+            'valid': True,
+            'user': {
+                'id': user_id,
+                'email': user_info.get('email'),
+                'name': user_info.get('name'),
+                'picture': user_info.get('picture')
+            }
+        }), 200
 
     @app.route("/", methods=["GET"])
-    def home():
+    @auth_required
+    def home(user_id):
+        # Validate that request is coming from our extension
+        if not validate_extension_request():
+            logger.warning(f"Unauthorized request from {request.remote_addr}")
+            return jsonify({"message": "Unauthorized request"}), 403
+            
         yt_url = request.args.get("yt_url")
         keyword = request.args.get("keyword")
-        # TODO: validate url with regex for security
-        # TODO: authentication
-        filename = get_video(yt_url)
+        
+        if not yt_url or not keyword:
+            logger.warning(f"Missing parameters in request from {request.remote_addr}")
+            return jsonify({"message": "Missing required parameters"}), 400
+            
+        # Validate YouTube URL using comprehensive validation
+        if not is_valid_youtube_url(yt_url):
+            logger.warning(f"Invalid YouTube URL: {yt_url}")
+            return jsonify({"message": "Invalid YouTube URL format. Please provide a valid YouTube URL."}), 400
+            
+        # Extract the video ID for additional validation and logging
+        video_id = extract_video_id(yt_url)
+        if not video_id:
+            logger.warning(f"Could not extract video ID from URL: {yt_url}")
+            return jsonify({"message": "Could not extract YouTube video ID from the provided URL."}), 400
+            
+        # Get user information
+        user_info = user_tokens[user_id].get('user_info', {})
+        user_email = user_info.get('email', 'unknown')
+            
+        logger.info(f"Processing request for video ID: {video_id}, keyword: {keyword} by user: {user_email}")
+        
+        # Use the validated video ID for processing
+        # For yt-dlp, we should still use the full URL
+        filename = get_video(yt_url) 
         transcript = get_transcript(yt_url)
         # TODO: Object recogniton in the video (videoUtils.py)
         # TODO: Transcript search (transcriptUtils.py)
@@ -51,6 +304,7 @@ def create_app():
 
     @app.route("/health", methods=["GET"])
     def health_check():
+        # Health check can be public for monitoring
         return jsonify({"status": "OK"}), 200
 
     """Downloads the raw YouTube video.
