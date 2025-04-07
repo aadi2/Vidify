@@ -179,33 +179,6 @@ body {
     color: #d9534f; 
 }
 
-.clickable-timestamp {
-    font-weight: bold;
-    color: #007bff;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 2px 5px;
-    border-radius: 3px;
-    transition: all 0.2s ease;
-    background: none;
-    border: none;
-    font-size: inherit;
-}
-
-.clickable-timestamp:hover {
-    background-color: #007bff;
-    color: white;
-}
-
-.dark-mode .clickable-timestamp {
-    color: #4dabf7;
-}
-
-.dark-mode .clickable-timestamp:hover {
-    background-color: #4dabf7;
-    color: #111;
-}
-
 .logo-container {
     display: flex;
     justify-content: center;

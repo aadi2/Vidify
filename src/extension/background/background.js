@@ -1,162 +1,15 @@
-const API_URL = "https://vidify-378225991600.us-central1.run.app"
+const API_URL = ""
 
-// Keep track of the authentication token and its expiration
-let authToken = null;
-let tokenExpiration = null;
-let userProfile = null;
-
-// Automatically trigger authentication check when the extension is installed or started.
+// Automatically trigger authentication when the extension is installed or started.
 chrome.runtime.onInstalled.addListener(() => {
     console.log("Vidify extension installed and ready!");
-    checkAuthentication();
+    //ensureAuthenticated();
   });
   
   chrome.runtime.onStartup.addListener(() => {
     console.log("Vidify extension started.");
-    checkAuthentication();
+    //ensureAuthenticated();
   });
-
-/**
- * Checks if the user is already authenticated
- */
-async function checkAuthentication() {
-  try {
-    const storedData = await chrome.storage.local.get(['authToken', 'tokenExpiration', 'userProfile']);
-    
-    // Check if we have a stored token
-    if (storedData.authToken && storedData.tokenExpiration) {
-      const now = new Date().getTime();
-      const expiry = new Date(storedData.tokenExpiration).getTime();
-      
-      if (now < expiry - 60000) { // 1 minute buffer
-        console.log("Using stored authentication token");
-        authToken = storedData.authToken;
-        tokenExpiration = storedData.tokenExpiration;
-        userProfile = storedData.userProfile;
-        
-        // Validate token with the server
-        const isValid = await validateToken(authToken);
-        if (isValid) {
-          return true;
-        }
-      }
-    }
-    
-    // Clear any invalid or expired token
-    authToken = null;
-    tokenExpiration = null;
-    userProfile = null;
-    
-    await chrome.storage.local.remove(['authToken', 'tokenExpiration', 'userProfile']);
-    return false;
-    
-  } catch (error) {
-    console.error("Authentication check error:", error);
-    return false;
-  }
-}
-
-/**
- * Validates a token with the server
- */
-async function validateToken(token) {
-  try {
-    const extensionId = chrome.runtime.id;
-    const response = await fetch(`${API_URL}/auth/validate`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Extension-Id': extensionId,
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!response.ok) {
-      return false;
-    }
-    
-    const data = await response.json();
-    if (data.valid && data.user) {
-      userProfile = data.user;
-      await chrome.storage.local.set({ userProfile });
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error("Token validation error:", error);
-    return false;
-  }
-}
-
-/**
- * Initiates the OAuth authentication flow
- */
-async function authenticateUser() {
-  try {
-    // Check if we're already authenticated
-    const isAuthenticated = await checkAuthentication();
-    if (isAuthenticated) {
-      return true;
-    }
-    
-    // Open a popup for Google OAuth authentication
-    const extensionId = chrome.runtime.id;
-    const authUrl = `${API_URL}/auth/login`;
-    
-    // Calculate center position for the popup
-    const width = 800;
-    const height = 600;
-    const left = (screen.width - width) / 2;
-    const top = (screen.height - height) / 2;
-    
-    const authWindow = window.open(
-      authUrl, 
-      'Vidify Authentication',
-      `width=${width},height=${height},left=${left},top=${top}`
-    );
-    
-    // Set up message listener for the token
-    return new Promise((resolve, reject) => {
-      const messageListener = async (event) => {
-        if (event.data && event.data.type === 'vidify_auth_token') {
-          // Remove the event listener
-          window.removeEventListener('message', messageListener);
-          
-          // Save the token
-          authToken = event.data.token;
-          tokenExpiration = new Date(event.data.expires_at);
-          
-          // Validate and store the token
-          const isValid = await validateToken(authToken);
-          if (isValid) {
-            await chrome.storage.local.set({
-              authToken,
-              tokenExpiration: tokenExpiration.toISOString(),
-              userProfile
-            });
-            
-            resolve(true);
-          } else {
-            reject(new Error('Token validation failed'));
-          }
-        }
-      };
-      
-      window.addEventListener('message', messageListener);
-      
-      // Set timeout in case the window is closed without completing auth
-      setTimeout(() => {
-        window.removeEventListener('message', messageListener);
-        reject(new Error('Authentication timed out'));
-      }, 300000); // 5 minutes timeout
-    });
-    
-  } catch (error) {
-    console.error("Authentication error:", error);
-    throw error;
-  }
-}
 
 // Detect YouTube video URL and store videoId in chrome.storage.local
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -190,46 +43,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             case "fetchFromSPI":
                 fetchFromSPI(request.endpoint, request.payload, sendResponse);
                 break;
-                
-            case "checkAuth":
-                checkAuthentication().then(isAuthenticated => {
-                    sendResponse({ 
-                        isAuthenticated, 
-                        userProfile: userProfile || null 
-                    });
-                });
-                return true;
-                break;
-                
-            case "login":
-                authenticateUser().then(success => {
-                    sendResponse({ 
-                        success, 
-                        userProfile: userProfile || null 
-                    });
-                }).catch(error => {
-                    sendResponse({ 
-                        success: false, 
-                        error: error.message 
-                    });
-                });
-                return true;
-                break;
-                
-            case "logout":
-                // Clear stored authentication data
-                authToken = null;
-                tokenExpiration = null;
-                userProfile = null;
-                chrome.storage.local.remove(['authToken', 'tokenExpiration', 'userProfile'])
-                    .then(() => {
-                        sendResponse({ success: true });
-                    })
-                    .catch(error => {
-                        sendResponse({ success: false, error: error.message });
-                    });
-                return true;
-                break;
 
             default:
                 console.warn("Unknown action received: ", request.action);
@@ -248,49 +61,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  * Checks if a URL is a YouTube video URL.
  */
 function isYouTubeVideoURL(url) {
-    if (!url) return false;
-    
-    // Check for common YouTube URL patterns
-    const youtubePatterns = [
-        /youtube\.com\/watch\?v=[a-zA-Z0-9_-]{11}/,
-        /youtu\.be\/[a-zA-Z0-9_-]{11}/,
-        /youtube\.com\/embed\/[a-zA-Z0-9_-]{11}/,
-        /youtube\.com\/shorts\/[a-zA-Z0-9_-]{11}/
-    ];
-    
-    return youtubePatterns.some(pattern => pattern.test(url));
+    return url.includes("youtube.com/watch") || url.includes("youtu.be/");
 }
 
 /**
  * Extracts the YouTube video ID from a URL.
  */
 function extractYouTubeVideoID(url) {
-    // Handle youtu.be URLs
-    let match = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})(?:\?|\/|$)/);
-    if (match) {
-        return match[1];
-    }
-    
-    // Handle youtube.com/watch URLs
-    match = url.match(/[?&]v=([a-zA-Z0-9_-]{11})(?:&|$|#)/);
-    if (match) {
-        return match[1];
-    }
-    
-    // Handle youtube.com/embed URLs
-    match = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?|\/|$)/);
-    if (match) {
-        return match[1];
-    }
-    
-    // Handle youtube.com/shorts URLs
-    match = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})(?:\?|\/|$)/);
-    if (match) {
-        return match[1];
-    }
-    
-    // Handle classic URL pattern as a fallback
-    match = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
+    const match = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
     return match ? match[1] : null;
 }
 
@@ -339,37 +117,17 @@ async function handleTranscriptSearch(videoId, searchTerm) {
       return { status: "error", message: "No video detected or provided" };
       return;
     }
-    
-    // Ensure we have a valid authentication token
-    const isAuthenticated = await checkAuthentication();
-    if (!isAuthenticated) {
-      try {
-        // Attempt to authenticate the user
-        await authenticateUser();
-      } catch (error) {
-        return { status: "error", message: "Authentication required. Please sign in." };
-      }
-    }
-    
-    if (!authToken) {
-      return { status: "error", message: "Authentication failed" };
-    }
   
     try {
       console.log(`Searching for term: ${searchTerm} in video: ${videoId}`);
   
       const apiUrl = API_URL + "/?yt_url=" + videoId + "&keyword=" + searchTerm;
 
-      // Get extension ID to send in headers for authentication
-      const extensionId = chrome.runtime.id;
-      
       //console.log(`API url`, apiUrl);
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-Extension-Id': extensionId,
-          'Authorization': `Bearer ${authToken}`
         },
         mode: 'cors',
       })
@@ -441,37 +199,15 @@ async function fetchFromSPI(endpoint, payload, sendResponse) {
         sendResponse({ status: "error", message: "No video detected or provided" });
         return;
     }
-    
-    // Ensure we have a valid authentication token
-    const isAuthenticated = await checkAuthentication();
-    if (!isAuthenticated) {
-        try {
-            // Attempt to authenticate the user
-            await authenticateUser();
-        } catch (error) {
-            sendResponse({ status: "error", message: "Authentication required. Please sign in." });
-            return;
-        }
-    }
-    
-    if (!authToken) {
-        sendResponse({ status: "error", message: "Authentication failed" });
-        return;
-    }
 
     try {
         const apiUrl = `http://localhost:5000${endpoint}`;
         const requestBody = { ...payload, videoId: finalVideoId };  // Auto-add videoId if not in payload
-        
-        // Get extension ID to send in headers for authentication
-        const extensionId = chrome.runtime.id;
 
         const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                "X-Extension-Id": extensionId,
-                "Authorization": `Bearer ${authToken}`
+                "Content-Type": "application/json"
             },
             body: JSON.stringify(requestBody)
         });

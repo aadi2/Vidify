@@ -9,44 +9,39 @@
     "32": "icons/icon-16.png"
   },
   "side_panel": {
-    "default_path": "content/components/search.html"
-  },
-  "permissions": [
-    "tabs",
-    "sidePanel",
-    "scripting",
-    "storage",
-    "activeTab"
-  ],
-  "host_permissions": [
-    "*://*.youtube.com/*",
-    "*://youtu.be/*",
-    "https://api.your-backend.com/*",
-    "https://accounts.google.com/o/oauth2/auth",
-    "https://www.googleapis.com/oauth2/v2/userinfo",
-    "http://localhost:5000/*",
-    "https://vidify-378225991600.us-central1.run.app/*"
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["content/youtube-navigator.js"],
-      "matches": ["*://*.youtube.com/*"]
+      "default_path": "content/components/search.html"
+    },
+    "permissions": [
+      "tabs",
+      "sidePanel",
+      "scripting",
+      "storage",
+      "activeTab"
+    ],
+    "host_permissions": [
+      "*://*.youtube.com/*",
+      "*://youtu.be/*",
+      "https://api.your-backend.com/*",
+      "https://accounts.google.com/o/oauth2/auth",
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+      "http://localhost:5000/*",
+      "https://vidify-378225991600.us-central1.run.app/*"
+    ],
+    "background": {
+      "service_worker": "background/background.js"
+    },
+    "content_scripts": [
+      {
+        "matches": [
+          "*://*.youtube.com/*", 
+          "*://youtu.be/*"
+        ],
+        "js": ["content/content.js"]
+      }
+    ],
+    "action": {
+      "default_popup": "content/components/search.html",
+      "default_icon": {}
     }
-  ],
-  "background": {
-    "service_worker": "background/background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.youtube.com/*", 
-        "*://youtu.be/*"
-      ],
-      "js": ["content/content.js"]
-    }
-  ],
-  "action": {
-    "default_popup": "content/components/search.html",
-    "default_icon": {}
   }
-}
+  
