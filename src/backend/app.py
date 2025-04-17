@@ -8,15 +8,16 @@ import whisper
 
 COOKIES_FILE = "cookies.txt"
 
+print("Loading Whisper model")
+WHISPER_MODEL = whisper.load_model("tiny")
+WHISPER_MODEL.to("cpu")
+
 
 def create_app():
     app = Flask(__name__)
     CORS(app)
 
-    print("Loading Whisper model")
-    model = whisper.load_model("tiny")
-    model.to("cpu")
-    app.config["WHISPER_MODEL"] = model
+    app.config["WHISPER_MODEL"] = WHISPER_MODEL
 
     @app.route("/", methods=["GET"])
     def home():
