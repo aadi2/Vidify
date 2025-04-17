@@ -39,17 +39,17 @@ def create_app():
 
                 return jsonify(result), 404
                 # Needed later for optimization:
-                '''
+                """
                 elif not transcript:
                     result = {"message": "Not able to fetch transcript.", "results": None}
 
                     os.remove(filename)
 
                     return jsonify(result), 404
-                '''
+                """
             else:
                 # Needed later for optimization:
-                '''
+                """
                 transcript_utils = transcriptUtils()
                 results = transcript_utils.search_transcript(transcript, keyword)
                 formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
@@ -57,7 +57,7 @@ def create_app():
                     "message": "Video and transcript downloaded successfully.",
                     "results": formatted_results,
                 }
-                '''
+                """
                 # Temporary:
                 response = {
                     "message": "Object Search is not implemented yet.",
@@ -73,7 +73,7 @@ def create_app():
         except Exception as e:
             print("An exception occured.")
             return jsonify({"message": "Internal server error", "error": str(e)}), 500
-        
+
     @app.route("/transcript_search", methods=["GET"])
     def transcript_search():
         try:
@@ -86,14 +86,19 @@ def create_app():
                 transcript_utils = transcriptUtils()
                 file = transcript_utils.create_transcript(yt_url, transcript, model)
                 if not file:
-                    result = {"message": "Not able to fetch transcript.", "results": None}
+                    result = {
+                        "message": "Not able to fetch transcript.",
+                        "results": None,
+                    }
                     print(result)
 
                     return jsonify(result), 404
                 else:
                     file = os.path.basename(file)
                     results = transcript_utils.search_transcript(file, keyword)
-                    formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
+                    formatted_results = [
+                        {"timestamp": r[0], "text": r[1]} for r in results
+                    ]
                     response = {
                         "message": "Transcript downloaded successfully.",
                         "results": formatted_results,
@@ -119,7 +124,9 @@ def create_app():
         except yt_dlp.utils.DownloadError as e:
             print("An exception occured.")
             print(e)
-            return jsonify({"message": "Not able to fetch transcript.", "error": str(e)}), 404
+            return jsonify(
+                {"message": "Not able to fetch transcript.", "error": str(e)}
+            ), 404
         except Exception as e:
             print("An exception occured.")
             print(e)
@@ -191,7 +198,9 @@ def create_app():
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=False)
-                subtitles = info_dict.get("subtitles") or info_dict.get("automatic_captions")
+                subtitles = info_dict.get("subtitles") or info_dict.get(
+                    "automatic_captions"
+                )
 
                 video_title = info_dict.get("title", "unknown_video")
                 transcript_url = None
