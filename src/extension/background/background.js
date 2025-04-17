@@ -1,4 +1,4 @@
-const API_URL = ""
+const API_URL = "https://vidify-378225991600.us-central1.run.app"
 
 // Automatically trigger authentication when the extension is installed or started.
 chrome.runtime.onInstalled.addListener(() => {
@@ -33,6 +33,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         switch (request.action) {
             case "searchTranscript":
                 handleTranscriptSearch(request.videoId, request.searchTerm).then((response) => sendResponse(response))
+                return true;
+                break;
+
+            case "searchObjects":
+                handleObjectSearch(request.videoId, request.searchTerm).then((response) => sendResponse(response))
                 return true;
                 break;
 
@@ -110,20 +115,17 @@ async function authenticatedFetch(url, payload) {
  * @param {function} sendResponse - Function to send response back to the caller
  */
 async function handleTranscriptSearch(videoId, searchTerm) {
-    //const finalVideoId = await getCurrentVideoId(videoId);
     console.log(`videoID: ${videoId}`);
   
     if (!videoId) {
       return { status: "error", message: "No video detected or provided" };
-      return;
     }
   
     try {
-      console.log(`Searching for term: ${searchTerm} in video: ${videoId}`);
+      console.log(`Searching for term: ${searchTerm} in transcript: ${videoId}`);
   
-      const apiUrl = API_URL + "/?yt_url=" + videoId + "&keyword=" + searchTerm;
+      const apiUrl = API_URL + "/transcript_search" + "?yt_url=" + videoId + "&keyword=" + searchTerm;
 
-      //console.log(`API url`, apiUrl);
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
@@ -154,7 +156,57 @@ async function handleTranscriptSearch(videoId, searchTerm) {
       console.error("Transcript search error:", error);
       return { status: "error", message: error.message };
     }
-  }
+}
+
+/**
+ * Handles object search by making an API call to the backend.
+ * @param {string} videoId - YouTube video ID
+ * @param {string} searchTerm - Keyword or object to search in the video
+ * @param {function} sendResponse - Function to send response back to the caller
+ */
+async function handleObjectSearch(videoId, searchTerm) {
+    console.log(`videoID: ${videoId}`);
+  
+    if (!videoId) {
+      return { status: "error", message: "No video detected or provided" };
+    }
+  
+    try {
+      console.log(`Searching for object: ${searchTerm} in video: ${videoId}`);
+  
+      const apiUrl = API_URL + "/object_search" + "?yt_url=" + videoId + "&keyword=" + searchTerm;
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+      })
+
+  
+      console.log("HTTP Status:", response.status, response.statusText);
+      const rawText = await response.text();
+      console.log("Raw response text:", rawText);
+  
+      let result;
+      try {
+        result = JSON.parse(rawText);
+      } catch (parseError) {
+        throw new Error(`Failed to parse JSON response: ${rawText}`);
+      }
+  
+      if (response.ok) {
+        console.log("Object search successful:", result);
+        return { status: "success", data: result };
+      } else {
+        throw new Error(result.message || `Object search failed with status ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Object search error:", error);
+      return { status: "error", message: error.message };
+    }
+}
   
 
 /**
