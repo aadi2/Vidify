@@ -12,9 +12,10 @@ BASE_URL = "http://127.0.0.1:8001"
 class TestSuite(unittest.TestCase):
     def setUp(self):
         self.invalid_url = "invalid_url"
-        self.no_transcript_url = "https://www.youtube.com/watch?v=sD9gTAFDq40"
+        self.no_transcript_url = "https://www.youtube.com/watch?v=7F5c64u0q28"
         self.valid_url = "https://www.youtube.com/watch?v=W86cTIoMv2U"
         self.keyword = "cat"
+        self.keyword2 = "come"
 
         self.process = subprocess.Popen([sys.executable, "src/backend/app.py"], stdout=sys.stdout, stderr=sys.stderr)
 
@@ -29,23 +30,35 @@ class TestSuite(unittest.TestCase):
             raise RuntimeError("Flask server failed to start.")
         
     # @pytest.mark.skip(reason="Have to fix cookies first. Avoiding blocking the development.")
-    def test_app(self):
+    def test_transcript_search(self):
         with self.subTest(key=self.invalid_url):
-            response = requests.get(f"{BASE_URL}/?yt_url={self.invalid_url}&keyword={self.keyword}")
+            response = requests.get(f"{BASE_URL}/transcript_search?yt_url={self.invalid_url}&keyword={self.keyword}")
+            print(response)
+            self.assertEqual(response.status_code, 404)
+            self.assertIn("not able to fetch transcript", response.text.lower())
+
+        with self.subTest(key=self.no_transcript_url):
+            response = requests.get(f"{BASE_URL}/transcript_search?yt_url={self.no_transcript_url}&keyword={self.keyword2}")
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("transcript downloaded successfully", response.text.lower())
+
+        with self.subTest(key=self.valid_url):
+            response = requests.get(f"{BASE_URL}/transcript_search?yt_url={self.valid_url}&keyword={self.keyword}")
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("transcript downloaded successfully", response.text.lower())
+
+    # @pytest.mark.skip(reason="Have to fix cookies first. Avoiding blocking the development.")
+    def test_object_search(self):
+        with self.subTest(key=self.invalid_url):
+            response = requests.get(f"{BASE_URL}/object_search?yt_url={self.invalid_url}&keyword={self.keyword}")
             print(response)
             self.assertEqual(response.status_code, 404)
             self.assertIn("not able to download the video", response.text.lower())
 
-        with self.subTest(key=self.no_transcript_url):
-            response = requests.get(f"{BASE_URL}/?yt_url={self.no_transcript_url}&keyword={self.keyword}")
-            self.assertEqual(response.status_code, 404)
-            self.assertIn("not able to fetch transcript", response.text.lower())
-
         with self.subTest(key=self.valid_url):
-            response = requests.get(f"{BASE_URL}/?yt_url={self.valid_url}&keyword={self.keyword}")
-            self.assertEqual(response.status_code, 200)
-            self.assertIn("video and transcript downloaded successfully", response.text.lower())
-
+            response = requests.get(f"{BASE_URL}/object_search?yt_url={self.valid_url}&keyword={self.keyword}")
+            self.assertEqual(response.status_code, 404)
+            self.assertIn("object search is not implemented yet", response.text.lower())
 
     def tearDown(self):
         self.process.terminate()

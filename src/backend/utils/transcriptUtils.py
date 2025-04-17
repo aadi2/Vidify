@@ -2,6 +2,8 @@ import yt_dlp
 import os
 import webvtt
 
+COOKIES_FILE = "cookies.txt"
+
 
 class transcriptUtils():
 
@@ -31,7 +33,8 @@ class transcriptUtils():
             "extract_audio": True,
             "audio_format": "mp3",
             "outtmpl": self.audio_file,
-            "noplaylist": True
+            "noplaylist": True,
+            "cookiefile": COOKIES_FILE
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -49,8 +52,14 @@ class transcriptUtils():
     """
     def create_transcript(self, yt_url, filename, model):
         self.__get_audio__(yt_url)
+        if not self.audio_file:
+            return None
+        
         result = model.transcribe(self.audio_file)
         self.filename = filename
+
+        if not result:
+            return None
 
         with open(self.transcript_file, "w", encoding="utf-8") as file:
             file.write("WEBVTT\n\n")

@@ -7,20 +7,21 @@ import pytest
 
 class TranscriptUtilsTestSuite(unittest.TestCase):
     def setUp(self):
-        self.no_transcript_url = "https://www.youtube.com/watch?v=sD9gTAFDq40"
+        self.no_transcript_url = "https://www.youtube.com/watch?v=7F5c64u0q28"
         self.file_path = ""
 
     @pytest.mark.skip(reason="Have to fix cookies first. Avoiding blocking the development.")
     def test_create_transcript(self):
         t_utils = transcriptUtils()
         model = whisper.load_model("tiny") # testing with smaller model for faster test run
+        model.to("cpu")
         self.file_path = t_utils.create_transcript(self.no_transcript_url, "test_transcript", model)
 
         self.assertTrue(self.file_path)
         self.assertTrue(os.path.exists("temp/subtitles/test_transcript.vtt"), "Transcript not created.")
 
     @pytest.mark.skip(reason="Tested locally with a test audio file")
-    def test_transcript_search():
+    def test_transcript_search(self):
         # Instantiate the utility class
         transcript_util = transcriptUtils()
         transcript = "test_transcript.vtt"
