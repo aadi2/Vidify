@@ -26,7 +26,7 @@ def create_app():
     def object_search():
         try:
             yt_url = request.args.get("yt_url")
-            keyword = request.args.get("keyword")
+            # keyword = request.args.get("keyword")
             # TODO: validate url with regex for security
             # TODO: authentication
             filename = get_video(yt_url)
