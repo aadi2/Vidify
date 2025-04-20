@@ -7,6 +7,9 @@ WORKDIR $APP_HOME
 # copy all files
 COPY . .
 
+# install system dependencies
+RUN apt-get update && apt-get install -y ffmpeg && apt-get clean
+
 # install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 

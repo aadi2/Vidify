@@ -2,8 +2,10 @@ import yt_dlp
 import os
 import webvtt
 
+COOKIES_FILE = "cookies.txt"
 
-class transcriptUtils():
+
+class transcriptUtils:
 
     """Class constructor
 
@@ -11,12 +13,13 @@ class transcriptUtils():
 
     Returns: None
     """
+
     def __init__(self):
         os.makedirs("temp/audio", exist_ok=True)
         self.audio_file = "temp/audio/temp_audio.mp3"
         self.filename = ""
         os.makedirs("temp/subtitles", exist_ok=True)
-        self.transcript_file = f'temp/subtitles/{self.filename}.vtt'
+        self.transcript_file = f"temp/subtitles/{self.filename}.vtt"
 
     """Download an audio file of the YouTube video to create transcript.
 
@@ -25,13 +28,15 @@ class transcriptUtils():
 
     Returns: None
     """
+
     def __get_audio__(self, yt_url):
         ydl_opts = {
             "format": "bestaudio/best",
             "extract_audio": True,
             "audio_format": "mp3",
             "outtmpl": self.audio_file,
-            "noplaylist": True
+            "noplaylist": True,
+            "cookiefile": COOKIES_FILE,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -47,10 +52,17 @@ class transcriptUtils():
     Returns:
         self.transcript_file (str): path to the transcript file.
     """
+
     def create_transcript(self, yt_url, filename, model):
         self.__get_audio__(yt_url)
+        if not self.audio_file:
+            return None
+
         result = model.transcribe(self.audio_file)
         self.filename = filename
+
+        if not result:
+            return None
 
         with open(self.transcript_file, "w", encoding="utf-8") as file:
             file.write("WEBVTT\n\n")
@@ -81,6 +93,7 @@ class transcriptUtils():
 
     Returns: None
     """
+
     def search_transcript(self, transcript, keyword):
         if not transcript or not keyword:
             return []

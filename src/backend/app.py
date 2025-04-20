@@ -4,50 +4,134 @@ import yt_dlp
 import requests
 from utils.transcriptUtils import transcriptUtils
 from flask_cors import CORS
+import whisper
 
 COOKIES_FILE = "cookies.txt"
+
+print("Loading Whisper model")
+WHISPER_MODEL = whisper.load_model("tiny")
+WHISPER_MODEL.to("cpu")
 
 
 def create_app():
     app = Flask(__name__)
     CORS(app)
 
+    app.config["WHISPER_MODEL"] = WHISPER_MODEL
+
     @app.route("/", methods=["GET"])
     def home():
-        yt_url = request.args.get("yt_url")
-        keyword = request.args.get("keyword")
-        # TODO: validate url with regex for security
-        # TODO: authentication
-        filename = get_video(yt_url)
-        transcript = get_transcript(yt_url)
-        # TODO: Object recogniton in the video (videoUtils.py)
-        # TODO: Transcript search (transcriptUtils.py)
+        Flask.redirect("/object_search")
 
-        if not filename:
-            result = {"message": "Not able to download the video.", "results": None}
+    @app.route("/object_search", methods=["GET"])
+    def object_search():
+        try:
+            yt_url = request.args.get("yt_url")
+            # keyword = request.args.get("keyword")
+            # TODO: validate url with regex for security
+            # TODO: authentication
+            filename = get_video(yt_url)
+            # Needed later for optimization:
+            # transcript = get_transcript(yt_url)
+            # TODO: Object recogniton in the video (videoUtils.py)
 
-            return jsonify(result), 404
-        elif not transcript:
-            result = {"message": "Not able to fetch transcript.", "results": None}
+            if not filename:
+                result = {"message": "Not able to download the video.", "results": None}
 
-            os.remove(filename)
+                return jsonify(result), 404
+                # Needed later for optimization:
+                """
+                elif not transcript:
+                    result = {"message": "Not able to fetch transcript.", "results": None}
 
-            return jsonify(result), 404
-        else:
-            # print("Transcript: ", transcript)
-            transcript_utils = transcriptUtils()
-            results = transcript_utils.search_transcript(transcript, keyword)
-            formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
-            response = {
-                "message": "Video and transcript downloaded successfully.",
-                "results": formatted_results,
-            }
-            print(response)
+                    os.remove(filename)
 
-            os.remove(filename)
-            os.remove("temp/subtitles/" + transcript)
+                    return jsonify(result), 404
+                """
+            else:
+                # Needed later for optimization:
+                """
+                transcript_utils = transcriptUtils()
+                results = transcript_utils.search_transcript(transcript, keyword)
+                formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
+                response = {
+                    "message": "Video and transcript downloaded successfully.",
+                    "results": formatted_results,
+                }
+                """
+                # Temporary:
+                response = {
+                    "message": "Object Search is not implemented yet.",
+                    "results": [],
+                }
+                print(response)
 
-            return jsonify(response), 200
+                os.remove(filename)
+                # Needed later for optimization:
+                # os.remove("temp/subtitles/" + transcript)
+
+                return jsonify(response), 404
+        except Exception as e:
+            print("An exception occured.")
+            return jsonify({"message": "Internal server error", "error": str(e)}), 500
+
+    @app.route("/transcript_search", methods=["GET"])
+    def transcript_search():
+        try:
+            yt_url = request.args.get("yt_url")
+            keyword = request.args.get("keyword")
+            transcript = get_transcript(yt_url)
+
+            if not transcript:
+                model = app.config["WHISPER_MODEL"]
+                transcript_utils = transcriptUtils()
+                file = transcript_utils.create_transcript(yt_url, transcript, model)
+                if not file:
+                    result = {
+                        "message": "Not able to fetch transcript.",
+                        "results": None,
+                    }
+                    print(result)
+
+                    return jsonify(result), 404
+                else:
+                    file = os.path.basename(file)
+                    results = transcript_utils.search_transcript(file, keyword)
+                    formatted_results = [
+                        {"timestamp": r[0], "text": r[1]} for r in results
+                    ]
+                    response = {
+                        "message": "Transcript downloaded successfully.",
+                        "results": formatted_results,
+                    }
+                    print(response)
+
+                    os.remove("temp/subtitles/" + file)
+
+                    return jsonify(response), 200
+            else:
+                transcript_utils = transcriptUtils()
+                results = transcript_utils.search_transcript(transcript, keyword)
+                formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
+                response = {
+                    "message": "Transcript downloaded successfully.",
+                    "results": formatted_results,
+                }
+                print(response)
+
+                os.remove("temp/subtitles/" + transcript)
+
+                return jsonify(response), 200
+        except yt_dlp.utils.DownloadError as e:
+            print("An exception occured.")
+            print(e)
+            return jsonify(
+                {"message": "Not able to fetch transcript.", "error": str(e)}
+            ), 404
+        except Exception as e:
+            print("An exception occured.")
+            print(e)
+            return jsonify({"message": "Internal  error", "error": str(e)}), 500
 
     @app.route("/health", methods=["GET"])
     def health_check():
@@ -148,7 +232,7 @@ def create_app():
                 # TODO: If not available, use NLP tools
                 return None
         except Exception as e:
-            print(f"Failed to fetch transcript. Exception {e}")
+            print(f"An error occured when fetching the transcript. Exception {e}")
             return None
 
     return app
