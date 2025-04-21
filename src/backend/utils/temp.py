@@ -2,8 +2,6 @@ import os
 import ffmpeg
 import re
 
-COOKIES_FILE = "cookies.txt"
-
 
 class temp:
 
@@ -32,9 +30,9 @@ class temp:
     def get_frames(self):
         # Extract frames
         out = ffmpeg.input(self.video_file).output(f'{self.frame_dir}/frame_%03d.jpg',
-                vf="select='eq(n\\,0)+gt(scene\\,0.3)',showinfo",
-                fps_mode='vfr').run(capture_stdout=True, capture_stderr=True)
-        
+                    vf="select='eq(n\\,0)+gt(scene\\,0.3)',showinfo",
+                    fps_mode='vfr').run(capture_stdout=True, capture_stderr=True)
+    
         # Rename frames' filenames to include timestamps in seconds
         p = re.compile(r"pts_time:([\d\.]+)")
         timestamps = p.findall(out[1].decode("utf-8", errors="ignore"))
@@ -44,7 +42,7 @@ class temp:
             new = f"{self.frame_dir}/frame_{float(timestamp):.3f}.jpg"
             if os.path.exists(old):
                 os.rename(old, new)
-        
+
     # TODO: Trent - Object Detection
     def find_objects(self):
         pass
