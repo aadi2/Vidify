@@ -29,10 +29,11 @@ class temp:
 
     def get_frames(self):
         # Extract frames
-        out = ffmpeg.input(self.video_file).output(f'{self.frame_dir}/frame_%03d.jpg',
-                    vf="select='eq(n\\,0)+gt(scene\\,0.3)',showinfo",
-                    fps_mode='vfr').run(capture_stdout=True, capture_stderr=True)
-    
+        out = ffmpeg.input(self.video_file).output(
+            f'{self.frame_dir}/frame_%03d.jpg',
+            vf="select='eq(n\\,0)+gt(scene\\,0.3)',showinfo",
+            fps_mode='vfr').run(capture_stdout=True, capture_stderr=True)
+
         # Rename frames' filenames to include timestamps in seconds
         p = re.compile(r"pts_time:([\d\.]+)")
         timestamps = p.findall(out[1].decode("utf-8", errors="ignore"))
