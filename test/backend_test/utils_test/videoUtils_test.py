@@ -11,7 +11,7 @@ COOKIES_FILE = "cookies.txt"
 
 class tempTestSuite(unittest.TestCase):
     def setUp(self):
-        self.video_url = "https://www.youtube.com/watch?v=SR__amDl1c8"
+        self.video_url = "https://www.youtube.com/watch?v=W86cTIoMv2U"
         self.video_file = ""
         self.output_dir = "temp/video"
         os.makedirs(self.output_dir, exist_ok=True)
@@ -39,9 +39,16 @@ class tempTestSuite(unittest.TestCase):
             "Frames not extracted",
         )
 
-        self.videoUtils.find_objects()
-        toc = self.videoUtils.toc
-        print(json.dumps(toc, indent=2))
+        toc = self.videoUtils.find_objects()
+        print("Returned TOC:", json.dumps(toc, indent=2))
+
+        self.assertTrue(toc, "No objects were detected by YOLO.")
+
+        expected_objects = ["cat", "person", "bird"]
+        intersection = set(expected_objects).intersection(toc.keys())
+        self.assertTrue(
+            intersection, f"Expected object(s) {expected_objects} not found in TOC."
+        )
 
     def tearDown(self):
         if os.path.exists(self.video_file):

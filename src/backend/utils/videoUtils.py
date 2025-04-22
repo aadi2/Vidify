@@ -22,7 +22,7 @@ class yolo:
         os.makedirs(f"{self.frame_dir}", exist_ok=True)
 
         self.model = YOLO("yolov8l.pt")
-        self.conf_thresh = 0.7
+        self.conf_thresh = 0.3
 
     """Extract video frames from a video based on how much they differ.
     The function selects only the frames that differ from the previous ones by more than 30%.
@@ -63,19 +63,20 @@ class yolo:
         # Scan all .jpg frames
         for filename in sorted(os.listdir(self.frame_dir)):
             if filename.endswith(".jpg"):
-                frame_path = os.path.join(self.frame_dir, filename)
-                timestamp = float(os.path.splitext(filename)[0])
+                match = re.match(r"([\d.]+)\.jpg", filename)
+            if not match:
+                continue  # Skip files like 'frame_001.jpg'
 
-                results = self.model(frame_path)[0]
-                for box in results.boxes:
-                    conf = float(box.conf[0])
-                    if conf >= self.conf_thresh:
-                        cls_id = int(box.cls[0])
-                        obj_name = self.model.names[cls_id]
+            timestamp = float(match.group(1))
+            frame_path = os.path.join(self.frame_dir, filename)
 
-                        if obj_name not in toc:
-                            toc[obj_name] = []
-                        toc[obj_name].append(timestamp)
+            results = self.model(frame_path)[0]
+            for box in results.boxes:
+                conf = float(box.conf[0])
+                if conf >= self.conf_thresh:
+                    cls_id = int(box.cls[0])
+                    obj_name = self.model.names[cls_id]
+                    toc.setdefault(obj_name, []).append(timestamp)
 
         # Save TOC to JSON
         os.makedirs("temp", exist_ok=True)
