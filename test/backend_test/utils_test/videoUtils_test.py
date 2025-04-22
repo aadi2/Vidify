@@ -11,14 +11,14 @@ COOKIES_FILE = "cookies.txt"
 
 class tempTestSuite(unittest.TestCase):
     def setUp(self):
-        self.video_url = "https://www.youtube.com/watch?v=W86cTIoMv2U"
+        self.video_url = "https://www.youtube.com/watch?v=SR__amDl1c8"
         self.video_file = ""
         self.output_dir = "temp/video"
         os.makedirs(self.output_dir, exist_ok=True)
         output_path = "temp/video/test.%(ext)s"
         ydl_opts = {
             "outtmpl": output_path,
-            "format": "worst",
+            "format": "best[ext=mp4]",
             "cookiefile": COOKIES_FILE,
         }
 
@@ -44,7 +44,7 @@ class tempTestSuite(unittest.TestCase):
 
         self.assertTrue(toc, "No objects were detected by YOLO.")
 
-        expected_objects = ["cat", "person", "bird"]
+        expected_objects = ["cat"]
         intersection = set(expected_objects).intersection(toc.keys())
         self.assertTrue(
             intersection, f"Expected object(s) {expected_objects} not found in TOC."

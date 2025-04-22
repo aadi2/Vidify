@@ -22,7 +22,7 @@ class yolo:
         os.makedirs(f"{self.frame_dir}", exist_ok=True)
 
         self.model = YOLO("yolov8l.pt")
-        self.conf_thresh = 0.3
+        self.conf_thresh = 0.05
 
     """Extract video frames from a video based on how much they differ.
     The function selects only the frames that differ from the previous ones by more than 30%.
@@ -62,8 +62,10 @@ class yolo:
 
         # Scan all .jpg frames
         for filename in sorted(os.listdir(self.frame_dir)):
-            if filename.endswith(".jpg"):
-                match = re.match(r"([\d.]+)\.jpg", filename)
+            if not filename.endswith(".jpg"):
+                continue
+
+            match = re.match(r"frame_([\d\.]+)\.jpg", filename)
             if not match:
                 continue  # Skip files like 'frame_001.jpg'
 
