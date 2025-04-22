@@ -30,7 +30,8 @@ def create_app():
         elif not transcript:
             result = {"message": "Not able to fetch transcript.", "results": None}
 
-            os.remove(filename)
+            if filename and os.path.exists(filename):
+                os.remove(filename)
 
             return jsonify(result), 404
         else:
@@ -44,8 +45,10 @@ def create_app():
             }
             print(response)
 
-            os.remove(filename)
-            os.remove("temp/subtitles/" + transcript)
+            if filename and os.path.exists(filename):
+                os.remove(filename)
+            if transcript and os.path.exists("temp/subtitles/" + transcript):
+                os.remove("temp/subtitles/" + transcript)
 
             return jsonify(response), 200
 
@@ -89,6 +92,8 @@ def create_app():
                 return None
         except Exception as e:
             print(f"Download failed. Exception: {e}")
+            if "Video unavailable" in str(e):
+                print("Video unavailable error detected")
             return None
 
     """Fetches the transcript for a YouTube video.
