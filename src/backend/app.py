@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 import os
 import yt_dlp
 import requests
+import re
 from utils.transcriptUtils import transcriptUtils
 from flask_cors import CORS
 import whisper
@@ -11,6 +12,26 @@ COOKIES_FILE = "cookies.txt"
 print("Loading Whisper model")
 WHISPER_MODEL = whisper.load_model("tiny")
 WHISPER_MODEL.to("cpu")
+
+# Regular expression for validating YouTube URLs
+YOUTUBE_URL_PATTERN = (
+    r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[a-zA-Z0-9_-]{11}(&.*)?$"
+)
+
+
+def is_valid_youtube_url(url):
+    """
+    Validates if the provided URL is a valid YouTube video URL.
+
+    Args:
+        url (str): The URL to validate
+
+    Returns:
+        bool: True if the URL is a valid YouTube URL, False otherwise
+    """
+    if not url:
+        return False
+    return bool(re.match(YOUTUBE_URL_PATTERN, url))
 
 
 def create_app():
@@ -27,8 +48,17 @@ def create_app():
     def object_search():
         try:
             yt_url = request.args.get("yt_url")
+
+            # Validate the YouTube URL
+            if not is_valid_youtube_url(yt_url):
+                return jsonify(
+                    {
+                        "message": "Invalid YouTube URL. Please provide a valid YouTube video URL.",
+                        "results": None,
+                    }
+                ), 400
+
             # keyword = request.args.get("keyword")
-            # TODO: validate url with regex for security
             # TODO: authentication
             filename = get_video(yt_url)
             # Needed later for optimization:
@@ -61,7 +91,7 @@ def create_app():
                 """
                 # Temporary:
                 response = {
-                    "message": "Object Search is not implemented yet.",
+                    "message": "Object search is not implemented yet.",
                     "results": [],
                 }
                 print(response)
@@ -79,6 +109,16 @@ def create_app():
     def transcript_search():
         try:
             yt_url = request.args.get("yt_url")
+
+            # Validate the YouTube URL
+            if not is_valid_youtube_url(yt_url):
+                return jsonify(
+                    {
+                        "message": "Invalid YouTube URL. Please provide a valid YouTube video URL.",
+                        "results": None,
+                    }
+                ), 400
+
             keyword = request.args.get("keyword")
             transcript = get_transcript(yt_url)
 
