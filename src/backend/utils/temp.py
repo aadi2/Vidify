@@ -63,7 +63,7 @@ class temp:
 
             # Process frames in batches to reduce memory usage
             for i in range(0, len(timestamps), batch_size):
-                batch = timestamps[i : min(i + batch_size, len(timestamps))]
+                batch = timestamps[i: min(i + batch_size, len(timestamps))]
                 self._process_frame_batch(batch)
 
             return len(timestamps)
