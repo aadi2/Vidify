@@ -88,22 +88,6 @@ Vidify consists of two main components:
 * Internet connection for API communication
 * For developers: Python 3.9+ and required dependencies
 
-### YOLOv9 Setup (for Object Detection)
-
-1. **Install prerequisites**:
-   ```
-   pip install torch torchvision
-   pip install opencv-python pillow
-   ```
-
-2. **Install YOLOv9**:
-   ```
-   git clone https://github.com/WongKinYiu/yolov9
-   cd yolov9
-   pip install -r requirements.txt
-   ```
-
-
 ## Loading the Extension in Chrome
 
 1. Open Chrome and navigate to `chrome://extensions/`
