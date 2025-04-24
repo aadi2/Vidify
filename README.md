@@ -163,7 +163,7 @@ Once thoroughly tested, the extension can be published to the Chrome Web Store b
 
 ## Acknowledgements
 
-- YOLOv9 for object detection capabilities
+- YOLOv8 for object detection capabilities
 - yt-dlp for YouTube video downloading functionality
 - Whisper for audio transcription
 
