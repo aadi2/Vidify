@@ -160,13 +160,6 @@ The backend can be deployed to Google Cloud Run using the provided `cloudbuild.y
 
 Once thoroughly tested, the extension can be published to the Chrome Web Store by creating a zip archive of the `build/extension` directory.
 
-## Contributing
-
-Contributions are welcome! Please ensure your code follows the project's style guidelines by running:
-
-```
-flake8 src/
-```
 
 ## Acknowledgements
 
