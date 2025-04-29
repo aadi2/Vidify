@@ -23,6 +23,7 @@ def is_valid_youtube_url(url):
 
 
 BASE_URL = "http://127.0.0.1:8001"
+API_KEY = "vid-xyz-123456789-vidify-secure-key"  # Same key as defined in app.py
 
 
 class TestSuite(unittest.TestCase):
@@ -51,7 +52,8 @@ class TestSuite(unittest.TestCase):
     def test_transcript_search(self):
         with self.subTest(key=self.invalid_url):
             response = requests.get(
-                f"{BASE_URL}/transcript_search?yt_url={self.invalid_url}&keyword={self.keyword}"
+                f"{BASE_URL}/transcript_search?yt_url={self.invalid_url}&keyword={self.keyword}",
+                headers={"X-API-Key": API_KEY},
             )
             print(response)
             # Either a 400 (invalid URL) or 404 (not able to fetch transcript) is acceptable
@@ -63,14 +65,16 @@ class TestSuite(unittest.TestCase):
 
         with self.subTest(key=self.no_transcript_url):
             response = requests.get(
-                f"{BASE_URL}/transcript_search?yt_url={self.no_transcript_url}&keyword={self.keyword2}"
+                f"{BASE_URL}/transcript_search?yt_url={self.no_transcript_url}&keyword={self.keyword2}",
+                headers={"X-API-Key": API_KEY},
             )
             self.assertEqual(response.status_code, 200)
             self.assertIn("transcript downloaded successfully", response.text.lower())
 
         with self.subTest(key=self.valid_url):
             response = requests.get(
-                f"{BASE_URL}/transcript_search?yt_url={self.valid_url}&keyword={self.keyword}"
+                f"{BASE_URL}/transcript_search?yt_url={self.valid_url}&keyword={self.keyword}",
+                headers={"X-API-Key": API_KEY},
             )
             self.assertEqual(response.status_code, 200)
             self.assertIn("transcript downloaded successfully", response.text.lower())
@@ -79,7 +83,8 @@ class TestSuite(unittest.TestCase):
     def test_object_search(self):
         with self.subTest(key=self.invalid_url):
             response = requests.get(
-                f"{BASE_URL}/object_search?yt_url={self.invalid_url}&keyword={self.keyword}"
+                f"{BASE_URL}/object_search?yt_url={self.invalid_url}&keyword={self.keyword}",
+                headers={"X-API-Key": API_KEY},
             )
         print(response)
         # Either a 400 (invalid URL) or 404 (not able to download) is acceptable
@@ -91,7 +96,8 @@ class TestSuite(unittest.TestCase):
 
         with self.subTest(key=self.valid_url):
             response = requests.get(
-                f"{BASE_URL}/object_search?yt_url={self.valid_url}&keyword={self.keyword}"
+                f"{BASE_URL}/object_search?yt_url={self.valid_url}&keyword={self.keyword}",
+                headers={"X-API-Key": API_KEY},
             )
             self.assertEqual(response.status_code, 404)
             # The response can be either "not able to download the video" or "object search is not implemented yet"
@@ -125,7 +131,8 @@ class TestSuite(unittest.TestCase):
 
         # Test endpoint with invalid URL
         response = requests.get(
-            f"{BASE_URL}/transcript_search?yt_url=https://google.com&keyword=test"
+            f"{BASE_URL}/transcript_search?yt_url=https://google.com&keyword=test",
+            headers={"X-API-Key": API_KEY},
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("invalid youtube url", response.text.lower())
