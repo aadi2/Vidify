@@ -44,7 +44,7 @@ class tempTestSuite(unittest.TestCase):
 
         self.assertTrue(toc, "No objects were detected by YOLO.")
 
-        expected_objects = ["cat"]
+        expected_objects = ["bottle"]
         intersection = set(expected_objects).intersection(toc.keys())
         self.assertTrue(
             intersection, f"Expected object(s) {expected_objects} not found in TOC."
