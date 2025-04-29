@@ -22,7 +22,7 @@ class yolo:
         os.makedirs(f"{self.frame_dir}", exist_ok=True)
 
         self.model = YOLO("yolov8l.pt")
-        self.conf_thresh = 0.05
+        self.conf_thresh = 0.3
 
     """Extract video frames from a video based on how much they differ.
     The function selects only the frames that differ from the previous ones by more than 30%.
