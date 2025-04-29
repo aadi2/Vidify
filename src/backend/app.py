@@ -5,6 +5,7 @@ import requests
 from utils.transcriptUtils import transcriptUtils
 from flask_cors import CORS
 import whisper
+from utils.videoUtils import yolo
 
 COOKIES_FILE = "cookies.txt"
 
@@ -27,52 +28,23 @@ def create_app():
     def object_search():
         try:
             yt_url = request.args.get("yt_url")
-            # keyword = request.args.get("keyword")
-            # TODO: validate url with regex for security
-            # TODO: authentication
+            if not yt_url:
+                return jsonify({"message": "Missing 'yt_url' parameter."}), 400
+
             filename = get_video(yt_url)
-            # Needed later for optimization:
-            # transcript = get_transcript(yt_url)
-            # TODO: Object recogniton in the video (videoUtils.py)
-
             if not filename:
-                result = {"message": "Not able to download the video.", "results": None}
+                return jsonify({"message": "Unable to download video."}), 404
 
-                return jsonify(result), 404
-                # Needed later for optimization:
-                """
-                elif not transcript:
-                    result = {"message": "Not able to fetch transcript.", "results": None}
+            vid = yolo(filename)
+            vid.get_frames()
+            toc = vid.find_objects()
 
-                    os.remove(filename)
+            os.remove(filename)
 
-                    return jsonify(result), 404
-                """
-            else:
-                # Needed later for optimization:
-                """
-                transcript_utils = transcriptUtils()
-                results = transcript_utils.search_transcript(transcript, keyword)
-                formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
-                response = {
-                    "message": "Video and transcript downloaded successfully.",
-                    "results": formatted_results,
-                }
-                """
-                # Temporary:
-                response = {
-                    "message": "Object Search is not implemented yet.",
-                    "results": [],
-                }
-                print(response)
-
-                os.remove(filename)
-                # Needed later for optimization:
-                # os.remove("temp/subtitles/" + transcript)
-
-                return jsonify(response), 404
+            return jsonify(
+                {"message": "Object detection completed.", "results": toc}
+            ), 200
         except Exception as e:
-            print("An exception occured.")
             return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
     @app.route("/transcript_search", methods=["GET"])

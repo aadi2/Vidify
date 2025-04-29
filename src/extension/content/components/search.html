@@ -7,16 +7,17 @@
     <link rel="stylesheet" href="../styles/search.css">
 </head>
 <body>
-
     <div class="logo-container">
         <img src="../../icons/icon-128.png" alt="Vidify Logo" class="vidify-logo">
     </div>
-    
-    <div class="search-container">
+
+    <!-- Transcript Search UI -->
+    <div class="search-container" id="transcript-ui">
         <input type="text" id="search-input" placeholder="Search for an object in the video..." />
         <button id="search-button">Search</button>
     </div>
 
+    <!-- Toggle Mode + Dark Mode -->
     <div class="toggle-container">
         <label class="toggle-switch">
             <input type="checkbox" id="dark-mode-toggle">
@@ -31,6 +32,7 @@
         <span id="mode-label">Transcript Search</span>
     </div>
 
+    <!-- Status & Progress UI -->
     <div id="status-message" class="hidden">Welcome to Vidify! Please search for an item in this video.</div>
     <div id="loading-spinner" class="hidden">
         <img src="../../icons/icon-48.png" alt="Loading..." class="loading-logo">
@@ -40,6 +42,34 @@
     </div>
     <div id="results-container"></div> 
 
+    <!-- Object Detection TOC UI -->
+    <div id="toc-ui" style="display:none">
+        <p>Loading object timeline...</p>
+        <div id="toc-container"></div>
+    </div>
+
     <script src="../search.js"></script>
+    <script src="../toc.js"></script>
+    <script>
+      document.getElementById("search-mode-toggle").addEventListener("change", function () {
+        const transcriptUI = document.getElementById("transcript-ui");
+        const resultsContainer = document.getElementById("results-container");
+        const tocUI = document.getElementById("toc-ui");
+        const modeLabel = document.getElementById("mode-label");
+
+        if (this.checked) {
+          transcriptUI.style.display = "none";
+          resultsContainer.style.display = "none";
+          tocUI.style.display = "block";
+          modeLabel.textContent = "Object Detection";
+          fetchObjectTOC();
+        } else {
+          transcriptUI.style.display = "flex";
+          resultsContainer.style.display = "block";
+          tocUI.style.display = "none";
+          modeLabel.textContent = "Transcript Search";
+        }
+      });
+    </script>
 </body>
 </html>

@@ -3,7 +3,6 @@ import unittest
 import os
 import sys
 import yt_dlp
-import shutil
 import json
 
 COOKIES_FILE = "cookies.txt"
@@ -50,15 +49,15 @@ class tempTestSuite(unittest.TestCase):
             intersection, f"Expected object(s) {expected_objects} not found in TOC."
         )
 
-    def tearDown(self):
-        if os.path.exists(self.video_file):
-            os.remove(self.video_file)
-        if os.path.exists(
-            f"temp/frames/{os.path.splitext(os.path.basename(self.video_file))[0]}"
-        ):
-            shutil.rmtree(
-                f"temp/frames/{os.path.splitext(os.path.basename(self.video_file))[0]}"
-            )
+    # def tearDown(self):
+    #     if os.path.exists(self.video_file):
+    #         os.remove(self.video_file)
+    #     if os.path.exists(
+    #         f"temp/frames/{os.path.splitext(os.path.basename(self.video_file))[0]}"
+    #     ):
+    #         shutil.rmtree(
+    #             f"temp/frames/{os.path.splitext(os.path.basename(self.video_file))[0]}"
+    #         )
 
 
 if __name__ == "__main__":

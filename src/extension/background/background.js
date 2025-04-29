@@ -174,7 +174,9 @@ async function handleObjectSearch(videoId, searchTerm) {
     try {
       console.log(`Searching for object: ${searchTerm} in video: ${videoId}`);
   
-      const apiUrl = API_URL + "/object_search" + "?yt_url=" + videoId + "&keyword=" + searchTerm;
+      const fullYouTubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const apiUrl = API_URL + "/object_search" + "?yt_url=" + encodeURIComponent(fullYouTubeUrl) + "&keyword=" + searchTerm;
+
 
       const response = await fetch(apiUrl, {
         method: 'GET',
