@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (response && response.status === 'success' && response.data) {
                 statusMessage.textContent = "Search complete!";
-                displayResultsInPopup(response.data, videoId, query);
+                displayResultsInPopup(response.data, videoId);
             } else {
                 statusMessage.textContent = "No results found.";
             }
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    function displayResultsInPopup(data, videoId, query) {
+    function displayResultsInPopup(data, videoId) {
         resultsContainer.innerHTML = `<h3>Results:</h3>`;
     
         if (!data.results || data.results.length === 0) {
