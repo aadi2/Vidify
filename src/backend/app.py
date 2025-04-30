@@ -89,7 +89,7 @@ def create_app():
         except Exception as e:
             print("An exception occured.")
             return jsonify({"message": "Internal server error", "error": str(e)}), 500
-    
+
     @app.route("/object_search", methods=["GET"])
     def object_search():
         try:

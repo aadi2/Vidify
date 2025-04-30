@@ -26,7 +26,8 @@ class videoUtils:
         self.conf_thresh = 0.3
 
         self.DINOprocessor = AutoProcessor.from_pretrained("IDEA-Research/grounding-dino-base")
-        self.DINOmodel = AutoModelForZeroShotObjectDetection.from_pretrained("IDEA-Research/grounding-dino-base").to(self.device)
+        self.DINOmodel = AutoModelForZeroShotObjectDetection.from_pretrained(
+            "IDEA-Research/grounding-dino-base").to(self.device)
 
     """Extract video frames from a video based on how much they differ.
     The function selects only the frames that differ from the previous ones by more than 30%.
@@ -68,7 +69,7 @@ class videoUtils:
         video_file (str): The path to the downloaded YouTube video.
 
     Returns:
-        toc ( {obj_name (str), [timestamp (str) ] } ): A dictionary with found objects, 
+        toc ( {obj_name (str), [timestamp (str) ] } ): A dictionary with found objects,
             with timestamps listed for each.
     """
 
