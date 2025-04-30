@@ -1,4 +1,4 @@
-from backend.utils.videoUtils import yolo
+from backend.utils.videoUtils import videoUtils
 import unittest
 import os
 import sys
@@ -29,17 +29,11 @@ class tempTestSuite(unittest.TestCase):
 
             self.video_file = output_path.replace("%(ext)s", info["ext"])
 
-        self.videoUtils = yolo(self.video_file)
+        self.videoUtils = videoUtils()
 
     # @pytest.mark.skip(reason="")
-    def test_create_transcript(self):
-        self.videoUtils.get_frames()
-        self.assertTrue(
-            os.path.exists("temp/frames") and os.listdir("temp/frames"),
-            "Frames not extracted",
-        )
-
-        toc = self.videoUtils.find_objects()
+    def test_find_objects(self):
+        toc = self.videoUtils.find_objects(self.video_file)
         print("Returned TOC:", json.dumps(toc, indent=2))
 
         self.assertTrue(toc, "No objects were detected by YOLO.")

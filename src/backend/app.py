@@ -4,14 +4,17 @@ import yt_dlp
 import requests
 import re
 from utils.transcriptUtils import transcriptUtils
+from utils.videoUtils import videoUtils
 from flask_cors import CORS
 import whisper
+import shutil
+import torch
 
 COOKIES_FILE = "cookies.txt"
 
 print("Loading Whisper model")
 WHISPER_MODEL = whisper.load_model("tiny")
-WHISPER_MODEL.to("cpu")
+WHISPER_MODEL.to("cuda" if torch.cuda.is_available() else "cpu")
 
 # Regular expression for validating YouTube URLs
 YOUTUBE_URL_PATTERN = (
@@ -38,14 +41,16 @@ def create_app():
     app = Flask(__name__)
     CORS(app)
 
-    app.config["WHISPER_MODEL"] = WHISPER_MODEL
+    app.whisper_model = WHISPER_MODEL
+    app.transcript_utils = transcriptUtils()
+    app.video_utils = videoUtils()
 
     @app.route("/", methods=["GET"])
     def home():
-        Flask.redirect("/object_search")
+        Flask.redirect("/toc")
 
-    @app.route("/object_search", methods=["GET"])
-    def object_search():
+    @app.route("/toc", methods=["GET"])
+    def toc():
         try:
             yt_url = request.args.get("yt_url")
 
@@ -58,49 +63,88 @@ def create_app():
                     }
                 ), 400
 
-            # keyword = request.args.get("keyword")
             # TODO: authentication
             filename = get_video(yt_url)
-            # Needed later for optimization:
-            # transcript = get_transcript(yt_url)
-            # TODO: Object recogniton in the video (videoUtils.py)
 
             if not filename:
                 result = {"message": "Not able to download the video.", "results": None}
 
                 return jsonify(result), 404
-                # Needed later for optimization:
-                """
-                elif not transcript:
-                    result = {"message": "Not able to fetch transcript.", "results": None}
-
-                    os.remove(filename)
-
-                    return jsonify(result), 404
-                """
             else:
-                # Needed later for optimization:
-                """
-                transcript_utils = transcriptUtils()
-                results = transcript_utils.search_transcript(transcript, keyword)
-                formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
+                results = app.video_utils.find_objects(filename)
+                formatted_results = [
+                    {"object": obj, "timestamps": time} for obj, time in results.items()
+                ]
                 response = {
-                    "message": "Video and transcript downloaded successfully.",
+                    "message": "Table of contents created successfully.",
                     "results": formatted_results,
-                }
-                """
-                # Temporary:
-                response = {
-                    "message": "Object search is not implemented yet.",
-                    "results": [],
                 }
                 print(response)
 
                 os.remove(filename)
-                # Needed later for optimization:
-                # os.remove("temp/subtitles/" + transcript)
+                if os.path.exists(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"):
+                    shutil.rmtree(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}")
 
-                return jsonify(response), 404
+                return jsonify(response), 200
+        except Exception as e:
+            print("An exception occured.")
+            return jsonify({"message": "Internal server error", "error": str(e)}), 500
+    
+    @app.route("/object_search", methods=["GET"])
+    def object_search():
+        try:
+            yt_url = request.args.get("yt_url")
+            keyword = request.args.get("keyword")
+
+            # Validate the YouTube URL
+            if not is_valid_youtube_url(yt_url):
+                return jsonify(
+                    {
+                        "message": "Invalid YouTube URL. Please provide a valid YouTube video URL.",
+                        "results": None,
+                    }
+                ), 400
+            elif not keyword:
+                return jsonify(
+                    {
+                        "message": "Invalid search term. Please provide a keyword.",
+                        "results": None,
+                    }
+                ), 400
+
+            # TODO: authentication
+            filename = get_video(yt_url)
+
+            if not filename:
+                result = {"message": "Not able to download the video.", "results": None}
+
+                return jsonify(result), 404
+            else:
+                results = app.video_utils.search_video(filename, keyword)
+
+                if not results:
+                    result = {"message": "Object not found.", "results": None}
+
+                    os.remove(filename)
+                    if os.path.exists(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"):
+                        shutil.rmtree(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}")
+
+                    return jsonify(result), 404
+
+                formatted_results = [
+                    {"object": keyword, "timestamps": time} for time in results
+                ]
+                response = {
+                    "message": "Object found successfully.",
+                    "results": formatted_results,
+                }
+                print(response)
+
+                os.remove(filename)
+                if os.path.exists(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"):
+                    shutil.rmtree(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}")
+
+                return jsonify(response), 200
         except Exception as e:
             print("An exception occured.")
             return jsonify({"message": "Internal server error", "error": str(e)}), 500
@@ -123,9 +167,7 @@ def create_app():
             transcript = get_transcript(yt_url)
 
             if not transcript:
-                model = app.config["WHISPER_MODEL"]
-                transcript_utils = transcriptUtils()
-                file = transcript_utils.create_transcript(yt_url, transcript, model)
+                file = app.transcript_utils.create_transcript(yt_url, transcript, app.whisper_model)
                 if not file:
                     result = {
                         "message": "Not able to fetch transcript.",
@@ -136,7 +178,7 @@ def create_app():
                     return jsonify(result), 404
                 else:
                     file = os.path.basename(file)
-                    results = transcript_utils.search_transcript(file, keyword)
+                    results = app.transcript_utils.search_transcript(file, keyword)
                     formatted_results = [
                         {"timestamp": r[0], "text": r[1]} for r in results
                     ]
@@ -150,8 +192,7 @@ def create_app():
 
                     return jsonify(response), 200
             else:
-                transcript_utils = transcriptUtils()
-                results = transcript_utils.search_transcript(transcript, keyword)
+                results = app.transcript_utils.search_transcript(transcript, keyword)
                 formatted_results = [{"timestamp": r[0], "text": r[1]} for r in results]
                 response = {
                     "message": "Transcript downloaded successfully.",
@@ -201,9 +242,12 @@ def create_app():
                 info = ydl.extract_info(url, download=True)
                 info = ydl.sanitize_info(info)
 
-                filename = output_path.replace("%(title)s", info["title"]).replace(
-                    "%(ext)s", info["ext"]
-                )
+                filename = ydl.prepare_filename(info)
+
+                new_filename = filename.replace(" ", "_")
+                if os.path.exists(filename) and new_filename != filename:
+                    os.rename(filename, new_filename)
+                    filename = new_filename
 
             if os.path.exists(filename):
                 print("Download successful")
@@ -251,12 +295,12 @@ def create_app():
                         for sub in subs:
                             if sub["ext"] == "vtt":
                                 transcript_url = sub["url"]
-                                # TODO: make sure that vtt is the optimal format
                                 break
 
             if transcript_url:
                 response = requests.get(transcript_url)
                 if response.status_code == 200:
+                    video_title = video_title.replace(" ", "_")
                     with open(
                         f"temp/subtitles/{video_title}.vtt", "w", encoding="utf-8"
                     ) as file:
@@ -265,11 +309,9 @@ def create_app():
                     return f"{video_title}.vtt"
                 else:
                     print("Failed to fetch transcript")
-                    # TODO: If not available, use NLP tools
                     return None
             else:
                 print("Failed to fetch transcript")
-                # TODO: If not available, use NLP tools
                 return None
         except Exception as e:
             print(f"An error occured when fetching the transcript. Exception {e}")
