@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (response && response.status === 'success' && response.data) {
                 statusMessage.textContent = "Search complete!";
-                displayResultsInPopup(response.data);
+                displayResultsInPopup(response.data, videoId);
             } else {
                 statusMessage.textContent = "No results found.";
             }
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    function displayResultsInPopup(data) {
+    function displayResultsInPopup(data, videoId) {
         resultsContainer.innerHTML = `<h3>Results:</h3>`;
     
         if (!data.results || data.results.length === 0) {
@@ -110,7 +110,43 @@ document.addEventListener("DOMContentLoaded", function() {
                 (match) => `<span class="result-highlight">${match}</span>`
             );
     
-            item.innerHTML = `${highlightedText} at <strong>${result.timestamp}s</strong>`;
+            const seconds = typeof result.timestamp === "string" && result.timestamp.includes(":")
+                ? parseTimestampToSeconds(result.timestamp)
+                : result.timestamp;
+
+            const link = `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(seconds)}s`;
+
+            item.innerHTML = `${highlightedText} at `;
+
+            // Create clickable timestamp
+            const timestampSpan = document.createElement("span");
+            timestampSpan.textContent = `${result.timestamp}s`;
+            timestampSpan.className = "timestamp-link";
+            timestampSpan.style.color = "#007bff";
+            timestampSpan.style.cursor = "pointer";
+            timestampSpan.style.textDecoration = "underline";
+            timestampSpan.setAttribute("data-seconds", seconds);
+            
+            // Send message to content script to seek
+            timestampSpan.addEventListener("click", () => {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    chrome.scripting.executeScript({
+                        target: { tabId: tabs[0].id },
+                        func: (seekTime) => {
+                            const video = document.querySelector("video");
+                            if (video) {
+                                video.currentTime = seekTime;
+                                video.play();
+                            }
+                        },
+                        args: [seconds]
+                    });
+                });
+                
+            });
+            
+            item.appendChild(timestampSpan);
+            
             resultsContainer.appendChild(item);
         });
     }
@@ -124,4 +160,16 @@ function extractVideoId(url) {
 
 function updateProgressBar(value) {
     document.getElementById("progress-bar").style.width = value + "%";
+}
+
+function parseTimestampToSeconds(ts) {
+    const parts = ts.replace("s", "").split(":").map(parseFloat);
+    if (parts.length === 3) {
+        const [hours, minutes, seconds] = parts;
+        return hours * 3600 + minutes * 60 + seconds;
+    } else if (parts.length === 2) {
+        const [minutes, seconds] = parts;
+        return minutes * 60 + seconds;
+    }
+    return parseFloat(ts);
 }
