@@ -1,6 +1,14 @@
 document.addEventListener("DOMContentLoaded", function() {
     const searchButton = document.getElementById("search-button");
     const searchInput = document.getElementById("search-input");
+    
+    searchInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();  // Prevent form submission if inside a form
+            searchButton.click();    // Trigger the search
+        }
+    });
+    
     const resultsContainer = document.getElementById("results-container");
     const statusMessage = document.getElementById("status-message");
     const loadingSpinner = document.getElementById("loading-spinner");
@@ -22,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     searchButton.addEventListener("click", async function() {
         const query = searchInput.value.trim();
-        
+
         if (query === "") {
             alert("Please enter a search term.");
             return;
