@@ -116,7 +116,37 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const link = `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(seconds)}s`;
 
-            item.innerHTML = `${highlightedText} at <a href="${link}" target="_blank"><strong>${result.timestamp}s</strong></a>`;
+            item.innerHTML = `${highlightedText} at `;
+
+            // Create clickable timestamp
+            const timestampSpan = document.createElement("span");
+            timestampSpan.textContent = `${result.timestamp}s`;
+            timestampSpan.className = "timestamp-link";
+            timestampSpan.style.color = "#007bff";
+            timestampSpan.style.cursor = "pointer";
+            timestampSpan.style.textDecoration = "underline";
+            timestampSpan.setAttribute("data-seconds", seconds);
+            
+            // Send message to content script to seek
+            timestampSpan.addEventListener("click", () => {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    chrome.scripting.executeScript({
+                        target: { tabId: tabs[0].id },
+                        func: (seekTime) => {
+                            const video = document.querySelector("video");
+                            if (video) {
+                                video.currentTime = seekTime;
+                                video.play();
+                            }
+                        },
+                        args: [seconds]
+                    });
+                });
+                
+            });
+            
+            item.appendChild(timestampSpan);
+            
             resultsContainer.appendChild(item);
         });
     }

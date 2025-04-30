@@ -29,6 +29,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         displayResults(request.data);
         sendResponse({ status: "Results displayed" });
     }
+    if (request.action === "seekTo" && typeof request.seconds === "number") {
+        if (videoElement) {
+            videoElement.currentTime = request.seconds;
+            videoElement.play();
+        }
+    }
 });
 
 /**
