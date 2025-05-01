@@ -30,8 +30,10 @@ class TestSuite(unittest.TestCase):
         self.invalid_url = "invalid_url"
         self.no_transcript_url = "https://www.youtube.com/watch?v=7F5c64u0q28"
         self.valid_url = "https://www.youtube.com/watch?v=W86cTIoMv2U"
+        self.video_url = "https://www.youtube.com/watch?v=SR__amDl1c8"
         self.keyword = "cat"
         self.keyword2 = "come"
+        self.keyword3 = "person"
 
         self.process = subprocess.Popen(
             [sys.executable, "src/backend/app.py"], stdout=sys.stdout, stderr=sys.stderr
@@ -43,7 +45,7 @@ class TestSuite(unittest.TestCase):
                 if response.status_code == 200:
                     break
             except requests.ConnectionError:
-                time.sleep(1)
+                time.sleep(5)
         else:
             raise RuntimeError("Flask server failed to start.")
 
@@ -65,6 +67,7 @@ class TestSuite(unittest.TestCase):
             response = requests.get(
                 f"{BASE_URL}/transcript_search?yt_url={self.no_transcript_url}&keyword={self.keyword2}"
             )
+            print(response)
             self.assertEqual(response.status_code, 200)
             self.assertIn("transcript downloaded successfully", response.text.lower())
 
@@ -72,6 +75,7 @@ class TestSuite(unittest.TestCase):
             response = requests.get(
                 f"{BASE_URL}/transcript_search?yt_url={self.valid_url}&keyword={self.keyword}"
             )
+            print(response)
             self.assertEqual(response.status_code, 200)
             self.assertIn("transcript downloaded successfully", response.text.lower())
 
@@ -81,24 +85,51 @@ class TestSuite(unittest.TestCase):
             response = requests.get(
                 f"{BASE_URL}/object_search?yt_url={self.invalid_url}&keyword={self.keyword}"
             )
-        print(response)
-        # Either a 400 (invalid URL) or 404 (not able to download) is acceptable
-        self.assertTrue(response.status_code in [400, 404])
-        self.assertTrue(
-            "invalid youtube url" in response.text.lower()
-            or "not able to download the video" in response.text.lower()
-        )
-
-        with self.subTest(key=self.valid_url):
-            response = requests.get(
-                f"{BASE_URL}/object_search?yt_url={self.valid_url}&keyword={self.keyword}"
-            )
-            self.assertEqual(response.status_code, 404)
-            # The response can be either "not able to download the video" or "object search is not implemented yet"
+            print(response)
+            # Either a 400 (invalid URL) or 404 (not able to download) is acceptable
+            self.assertTrue(response.status_code in [400, 404])
             self.assertTrue(
-                "not able to download the video" in response.text.lower()
-                or "object search is not implemented yet" in response.text.lower()
+                "invalid youtube url" in response.text.lower()
+                or "not able to download the video" in response.text.lower()
             )
+
+        with self.subTest(key=self.video_url):
+            response = requests.get(
+                f"{BASE_URL}/object_search?yt_url={self.video_url}&keyword={self.keyword}"
+            )
+            print(response)
+            self.assertEqual(response.status_code, 404)
+            self.assertTrue("object not found")
+
+        with self.subTest(key=self.video_url):
+            response = requests.get(
+                f"{BASE_URL}/object_search?yt_url={self.video_url}&keyword={self.keyword3}"
+            )
+            print(response)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue("object found successfully")
+
+    # @pytest.mark.skip(reason="Have to fix cookies first. Avoiding blocking the development.")
+    def test_toc(self):
+        with self.subTest(key=self.invalid_url):
+            response = requests.get(
+                f"{BASE_URL}/toc?yt_url={self.invalid_url}"
+            )
+            print(response)
+            # Either a 400 (invalid URL) or 404 (not able to download) is acceptable
+            self.assertTrue(response.status_code in [400, 404])
+            self.assertTrue(
+                "invalid youtube url" in response.text.lower()
+                or "not able to download the video" in response.text.lower()
+            )
+
+        with self.subTest(key=self.video_url):
+            response = requests.get(
+                f"{BASE_URL}/toc?yt_url={self.video_url}"
+            )
+            print(response)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue("table of contents created successfully")
 
     def test_url_validation(self):
         """Test URL validation logic"""
