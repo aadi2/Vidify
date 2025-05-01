@@ -45,7 +45,7 @@ class TestSuite(unittest.TestCase):
                 if response.status_code == 200:
                     break
             except requests.ConnectionError:
-                time.sleep(1)
+                time.sleep(5)
         else:
             raise RuntimeError("Flask server failed to start.")
 
