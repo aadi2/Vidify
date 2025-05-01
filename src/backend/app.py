@@ -9,8 +9,34 @@ from flask_cors import CORS
 import whisper
 import shutil
 import torch
+from functools import wraps
 
 COOKIES_FILE = "cookies.txt"
+# Security: API key for authenticating requests from our Chrome extension
+API_KEY = "nd6jDi5OlUHYFg6suHZH-7q3AHLidUi5d5Ydk7XnX9c"
+
+
+def require_api_key(f):
+    """
+    Decorator that checks for the presence of a valid API key in the request.
+    This ensures only authorized clients (our Chrome extension) can access the API.
+    """
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Get API key from request header
+        provided_key = request.headers.get("X-API-Key")
+
+        # Check if key is valid
+        if provided_key and provided_key == API_KEY:
+            return f(*args, **kwargs)
+        else:
+            return jsonify(
+                {"message": "Unauthorized. Invalid or missing API key."}
+            ), 401
+
+    return decorated_function
+
 
 print("Loading Whisper model")
 WHISPER_MODEL = whisper.load_model("tiny")
@@ -50,6 +76,7 @@ def create_app():
         Flask.redirect("/toc")
 
     @app.route("/toc", methods=["GET"])
+    @require_api_key
     def toc():
         try:
             yt_url = request.args.get("yt_url")
@@ -82,8 +109,12 @@ def create_app():
                 print(response)
 
                 os.remove(filename)
-                if os.path.exists(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"):
-                    shutil.rmtree(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}")
+                if os.path.exists(
+                    f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"
+                ):
+                    shutil.rmtree(
+                        f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"
+                    )
 
                 return jsonify(response), 200
         except Exception as e:
@@ -91,6 +122,7 @@ def create_app():
             return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
     @app.route("/object_search", methods=["GET"])
+    @require_api_key
     def object_search():
         try:
             yt_url = request.args.get("yt_url")
@@ -126,8 +158,12 @@ def create_app():
                     result = {"message": "Object not found.", "results": None}
 
                     os.remove(filename)
-                    if os.path.exists(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"):
-                        shutil.rmtree(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}")
+                    if os.path.exists(
+                        f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"
+                    ):
+                        shutil.rmtree(
+                            f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"
+                        )
 
                     return jsonify(result), 404
 
@@ -141,8 +177,12 @@ def create_app():
                 print(response)
 
                 os.remove(filename)
-                if os.path.exists(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"):
-                    shutil.rmtree(f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}")
+                if os.path.exists(
+                    f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"
+                ):
+                    shutil.rmtree(
+                        f"temp/frames/{os.path.splitext(os.path.basename(filename))[0]}"
+                    )
 
                 return jsonify(response), 200
         except Exception as e:
@@ -150,6 +190,7 @@ def create_app():
             return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
     @app.route("/transcript_search", methods=["GET"])
+    @require_api_key
     def transcript_search():
         try:
             yt_url = request.args.get("yt_url")
@@ -167,7 +208,9 @@ def create_app():
             transcript = get_transcript(yt_url)
 
             if not transcript:
-                file = app.transcript_utils.create_transcript(yt_url, transcript, app.whisper_model)
+                file = app.transcript_utils.create_transcript(
+                    yt_url, transcript, app.whisper_model
+                )
                 if not file:
                     result = {
                         "message": "Not able to fetch transcript.",
@@ -215,6 +258,7 @@ def create_app():
             return jsonify({"message": "Internal  error", "error": str(e)}), 500
 
     @app.route("/health", methods=["GET"])
+    @require_api_key
     def health_check():
         return jsonify({"status": "OK"}), 200
 

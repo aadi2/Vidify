@@ -105,7 +105,20 @@ If you continue to experience issues:
 
 ## Backend API Endpoints
 
-Vidify's backend API is not publicly accessible to reduce operational costs. The following documentation is for development and reference purposes only.
+Vidify's backend API is restricted and secured with an API key to reduce operational costs and prevent unauthorized access. The API is only accessible to our official Chrome extension. The following documentation is for development and reference purposes only.
+
+### API Authentication
+
+All API endpoints require authentication using an API key:
+
+```
+GET /any-endpoint
+X-API-Key: your-api-key-here
+```
+
+- The API key must be included in the `X-API-Key` HTTP header
+- Requests without a valid API key will receive a 401 Unauthorized response
+- This security measure ensures that only the official Vidify extension can use the API, preventing abuse and unauthorized usage
 
 ### Health Check
 ```
@@ -166,7 +179,7 @@ GET /object_search
 
 ## Extension API
 
-The Vidify extension exposes several message handlers for communication between components.
+The Vidify extension exposes several message handlers for communication between components. All API requests from the extension to the backend are secured with an API key for authentication. For more details on API security, see our [API Security Documentation](./API_SECURITY.md).
 
 ### Background Service Worker
 
