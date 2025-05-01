@@ -6,7 +6,6 @@ from PIL import Image
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 import torch
 
-
 class videoUtils:
 
     """Class constructor

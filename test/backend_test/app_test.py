@@ -39,7 +39,7 @@ class TestSuite(unittest.TestCase):
             [sys.executable, "src/backend/app.py"], stdout=sys.stdout, stderr=sys.stderr
         )
 
-        for _ in range(15):
+        for _ in range(20):
             try:
                 response = requests.get(f"{BASE_URL}/health")
                 if response.status_code == 200:
