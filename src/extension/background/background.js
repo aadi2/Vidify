@@ -41,6 +41,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 return true;
                 break;
 
+            case "tableOfContents":
+                handleToC(request.videoId).then((response) => sendResponse(response))
+                return true;
+                break;
+
             case "getSearchHistory":
                 handleSearchHistory(sendResponse);
                 break;
@@ -207,7 +212,55 @@ async function handleObjectSearch(videoId, searchTerm) {
       return { status: "error", message: error.message };
     }
 }
-  
+
+/**
+ * Handles creation of table of contents for object detection with YOLO
+ * @param {string} videoId - YouTube video ID
+ * @param {function} sendResponse - Function to send response back to the caller
+ */
+async function handleToC(videoId) {
+  console.log(`videoID: ${videoId}`);
+
+  if (!videoId) {
+    return { status: "error", message: "No video detected or provided" };
+  }
+
+  try {
+    console.log(`Searching for objects in the video: ${videoId}`);
+
+    const apiUrl = API_URL + "/toc" + "?yt_url=" + videoId;
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      mode: 'cors',
+    })
+
+
+    console.log("HTTP Status:", response.status, response.statusText);
+    const rawText = await response.text();
+    console.log("Raw response text:", rawText);
+
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch (parseError) {
+      throw new Error(`Failed to parse JSON response: ${rawText}`);
+    }
+
+    if (response.ok) {
+      console.log("Table of contents fetch successful:", result);
+      return { status: "success", data: result };
+    } else {
+      throw new Error(result.message || `Table of contents fetch failed with status ${response.status} ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error("Table of contents fetch error:", error);
+    return { status: "error", message: error.message };
+  }
+} 
 
 /**
  * Handles retrieval of the user's search history from Chrome storage.
