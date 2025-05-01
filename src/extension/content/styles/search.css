@@ -109,10 +109,18 @@ body {
     border: 1px solid #888;
 }
 
+.dark-mode #search-input::placeholder {
+    color: #cccccc;
+}
+
 .dark-mode #search-button {
     background-color: #007bff;
     color: white;
     border: 1px solid #0056b3;
+}
+
+.dark-mode #status-message {
+    color: white;
 }
 
 #loading-spinner {
