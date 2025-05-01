@@ -1,14 +1,14 @@
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     const searchButton = document.getElementById("search-button");
     const searchInput = document.getElementById("search-input");
-    
+
     searchInput.addEventListener("keydown", function (event) {
         if (event.key === "Enter") {
-            event.preventDefault();  // Prevent form submission if inside a form
-            searchButton.click();    // Trigger the search
+            event.preventDefault();
+            searchButton.click();
         }
     });
-    
+
     const resultsContainer = document.getElementById("results-container");
     const statusMessage = document.getElementById("status-message");
     const loadingSpinner = document.getElementById("loading-spinner");
@@ -17,21 +17,19 @@ document.addEventListener("DOMContentLoaded", function() {
     const darkModeToggle = document.getElementById("dark-mode-toggle");
     let cachedTOC = null;
 
-
     statusMessage.classList.remove("hidden");
     statusMessage.textContent = "Welcome to Vidify! Please search using a keyword...";
 
-    darkModeToggle.addEventListener("change", function() {
+    darkModeToggle.addEventListener("change", function () {
         document.body.classList.toggle("dark-mode", darkModeToggle.checked);
     });
 
-    searchModeToggle.addEventListener("change", async function() {
+    searchModeToggle.addEventListener("change", async function () {
         modeLabel.textContent = searchModeToggle.checked ? "Object Detection" : "Transcript Search";
-        
+
         resultsContainer.innerHTML = "";
         const query = searchInput.value.trim();
-    
-        // Only auto-load TOC if no search input
+
         if (searchModeToggle.checked && query === "") {
             statusMessage.textContent = "Loading detected objects...";
             const videoId = await getActiveTabUrl();
@@ -40,75 +38,53 @@ document.addEventListener("DOMContentLoaded", function() {
             statusMessage.textContent = "Welcome to Vidify! Please search using a keyword...";
         }
     });
-    
 
-    searchButton.addEventListener("click", async function() {
+    searchButton.addEventListener("click", async function () {
         const query = searchInput.value.trim();
-
         if (query === "") {
             alert("Please enter a search term.");
             return;
         }
 
         statusMessage.textContent = `Searching for "${query}"...`;
-
-        loadingSpinner.style.display = "flex"; 
+        loadingSpinner.style.display = "flex";
         loadingSpinner.classList.add("rotating");
-
-        document.querySelector(".progress-container").style.display = "block"; 
-        updateProgressBar(0);
-        setTimeout(() => {
-            updateProgressBar(10); // Move to 10% after 1.5 seconds
-        }, 1500);
-        resultsContainer.innerHTML = ""; 
+        resultsContainer.innerHTML = "";
 
         const videoId = await getActiveTabUrl();
-        console.log("Extracted Video URL:", videoId);
-
         if (!videoId) {
             alert("Could not detect a video ID. Please make sure you're on a YouTube video page.");
             return;
         }
-        setTimeout(() => {
-            updateProgressBar(60); // Move to 10% after 1.5 seconds
-        }, 5000);
+
         try {
             const response = await chrome.runtime.sendMessage({
                 action: searchModeToggle.checked ? "searchObjects" : "searchTranscript",
                 videoId: videoId,
-                searchTerm: query
+                searchTerm: query,
             });
-            
-            updateProgressBar(100); 
-            setTimeout(() => {
-                document.querySelector(".progress-container").style.display = "none"; // Hide bar
-            }, 500);
 
-            loadingSpinner.classList.remove("rotating"); 
-            loadingSpinner.style.display = "none"; 
+            loadingSpinner.classList.remove("rotating");
+            loadingSpinner.style.display = "none";
 
-            if (response && response.status === 'success' && response.data) {
+            if (response && response.status === "success" && response.data) {
                 statusMessage.textContent = "Search complete!";
                 displayResultsInPopup(response.data, videoId);
             } else {
                 statusMessage.textContent = "No results found.";
             }
-
-            console.log(response);
-
         } catch (error) {
-            console.error('Error during search:', error);
+            console.error("Error during search:", error);
             resultsContainer.innerHTML = `<p style="color: red;">Search failed: ${error.message || "Unknown error"}</p>`;
         }
     });
 
-// Automatically load TOC if in Object Detection Mode and no search term is entered
     if (searchModeToggle.checked) {
-        getActiveTabUrl().then(videoId => {
+        getActiveTabUrl().then((videoId) => {
             loadObjectTOC(videoId);
         });
     }
-    
+
     async function getActiveTabUrl() {
         return new Promise((resolve, reject) => {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -122,107 +98,133 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function displayResultsInPopup(data, videoId) {
         resultsContainer.innerHTML = `<h3>Results:</h3>`;
-    
+
         if (!data.results || data.results.length === 0) {
             resultsContainer.innerHTML += `<p>No results found.</p>`;
             return;
         }
-    
-        data.results.forEach(result => {
-            const item = document.createElement("div");
-            item.className = "result-item";
-    
-            // Highlight keyword
-            let highlightedText = result.text.replace(
-                new RegExp(searchInput.value, "gi"),
-                (match) => `<span class="result-highlight">${match}</span>`
-            );
-    
-            const seconds = typeof result.timestamp === "string" && result.timestamp.includes(":")
-                ? parseTimestampToSeconds(result.timestamp)
-                : result.timestamp;
 
-            const link = `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(seconds)}s`;
+        data.results.forEach((result) => {
+            const label = result.text || result.object || "Result";
 
-            item.innerHTML = `${highlightedText} at `;
+            if (result.timestamps !== undefined) {
+                const timestamps = Array.isArray(result.timestamps) ? result.timestamps : [result.timestamps];
 
-            // Create clickable timestamp
-            const timestampSpan = document.createElement("span");
-            timestampSpan.textContent = `${result.timestamp}s`;
-            timestampSpan.className = "timestamp-link";
-            timestampSpan.style.color = "#007bff";
-            timestampSpan.style.cursor = "pointer";
-            timestampSpan.style.textDecoration = "underline";
-            timestampSpan.setAttribute("data-seconds", seconds);
-            
-            // Send message to content script to seek
-            timestampSpan.addEventListener("click", () => {
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    chrome.scripting.executeScript({
-                        target: { tabId: tabs[0].id },
-                        func: (seekTime) => {
-                            const video = document.querySelector("video");
-                            if (video) {
-                                video.currentTime = seekTime;
-                                video.play();
-                            }
-                        },
-                        args: [seconds]
+                timestamps.forEach((ts) => {
+                    const seconds = typeof ts === "string" ? parseTimestampToSeconds(ts) : ts;
+
+                    const item = document.createElement("div");
+                    item.className = "result-item";
+                    item.innerHTML = `<strong>${label}</strong> at `;
+
+                    const timestampSpan = document.createElement("span");
+                    timestampSpan.textContent = `${seconds.toFixed(1)}s`;
+                    timestampSpan.className = "timestamp-link";
+                    timestampSpan.style.color = "#007bff";
+                    timestampSpan.style.cursor = "pointer";
+                    timestampSpan.style.textDecoration = "underline";
+                    timestampSpan.setAttribute("data-seconds", seconds);
+
+                    timestampSpan.addEventListener("click", () => {
+                        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                            chrome.scripting.executeScript({
+                                target: { tabId: tabs[0].id },
+                                func: (seekTime) => {
+                                    const video = document.querySelector("video");
+                                    if (video) {
+                                        video.currentTime = seekTime;
+                                        video.play();
+                                    }
+                                },
+                                args: [seconds],
+                            });
+                        });
+                    });
+
+                    item.appendChild(timestampSpan);
+                    resultsContainer.appendChild(item);
+                });
+            } else if (result.timestamp !== undefined) {
+                const seconds = typeof result.timestamp === "string" ? parseTimestampToSeconds(result.timestamp) : result.timestamp;
+
+                const item = document.createElement("div");
+                item.className = "result-item";
+                item.innerHTML = `<strong>${label}</strong> at `;
+
+                const timestampSpan = document.createElement("span");
+                timestampSpan.textContent = `${seconds.toFixed(1)}s`;
+                timestampSpan.className = "timestamp-link";
+                timestampSpan.style.color = "#007bff";
+                timestampSpan.style.cursor = "pointer";
+                timestampSpan.style.textDecoration = "underline";
+                timestampSpan.setAttribute("data-seconds", seconds);
+
+                timestampSpan.addEventListener("click", () => {
+                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                        chrome.scripting.executeScript({
+                            target: { tabId: tabs[0].id },
+                            func: (seekTime) => {
+                                const video = document.querySelector("video");
+                                if (video) {
+                                    video.currentTime = seekTime;
+                                    video.play();
+                                }
+                            },
+                            args: [seconds],
+                        });
                     });
                 });
-                
-            });
-            
-            item.appendChild(timestampSpan);
-            
-            resultsContainer.appendChild(item);
+
+                item.appendChild(timestampSpan);
+                resultsContainer.appendChild(item);
+            }
         });
     }
+
     function loadObjectTOC(videoId) {
         if (!videoId) return;
-    
+
         chrome.runtime.sendMessage({
             action: "tableOfContents",
-            videoId: videoId
+            videoId: videoId,
         }, (response) => {
             if (response && response.status === "success" && response.data) {
                 cachedTOC = response.data;
                 renderTOC(cachedTOC, videoId);
-
             } else {
                 resultsContainer.innerHTML = "<p>Failed to load detected objects.</p>";
             }
         });
     }
-    
+
     function renderTOC(tocData, videoId) {
         resultsContainer.innerHTML = "<h3>Detected Objects:</h3>";
-    
+
         const list = document.createElement("ul");
-        tocData.results.forEach(obj => {
+        tocData.results.forEach((obj) => {
             const listItem = document.createElement("li");
             listItem.textContent = obj.object;
             listItem.style.cursor = "pointer";
             listItem.style.color = "#007bff";
             listItem.style.textDecoration = "underline";
-    
+
             listItem.onclick = () => {
                 renderTimestamps(obj.object, obj.timestamps, videoId);
             };
-    
+
             list.appendChild(listItem);
         });
-    
+
         resultsContainer.appendChild(list);
     }
-    
+
     function renderTimestamps(label, timestamps, videoId) {
         resultsContainer.innerHTML = `<h3>Occurrences of "${label}":</h3>`;
-    
-        timestamps.forEach(timestamp => {
-            const seconds = typeof timestamp === "string" ? parseTimestampToSeconds(timestamp) : timestamp;        
+
+        timestamps.forEach((timestamp) => {
+            const seconds = typeof timestamp === "string" ? parseTimestampToSeconds(timestamp) : timestamp;
             const link = document.createElement("p");
-            link.textContent = `${timestamp}s`;
+            link.textContent = `${seconds.toFixed(1)}s`;
             link.className = "timestamp-link";
             link.style.cursor = "pointer";
             link.style.textDecoration = "underline";
@@ -238,14 +240,14 @@ document.addEventListener("DOMContentLoaded", function() {
                                 video.play();
                             }
                         },
-                        args: [seconds]
+                        args: [seconds],
                     });
                 });
             };
-    
+
             resultsContainer.appendChild(link);
         });
-    
+
         const backBtn = document.createElement("button");
         backBtn.textContent = "Back to TOC";
         backBtn.onclick = () => renderTOC(cachedTOC, videoId);
@@ -253,16 +255,11 @@ document.addEventListener("DOMContentLoaded", function() {
         backBtn.style.cursor = "pointer";
         resultsContainer.appendChild(backBtn);
     }
-    
 });
 
 function extractVideoId(url) {
     const match = url.match(/[?&]v=([^&]+)/);
     return match ? match[1] : null;
-}
-
-function updateProgressBar(value) {
-    document.getElementById("progress-bar").style.width = value + "%";
 }
 
 function parseTimestampToSeconds(ts) {
