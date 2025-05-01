@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const searchModeToggle = document.getElementById("search-mode-toggle");
     const modeLabel = document.getElementById("mode-label");
     const darkModeToggle = document.getElementById("dark-mode-toggle");
+    let cachedTOC = null;
 
 
     statusMessage.classList.remove("hidden");
@@ -185,7 +186,9 @@ document.addEventListener("DOMContentLoaded", function() {
             videoId: videoId
         }, (response) => {
             if (response && response.status === "success" && response.data) {
-                renderTOC(response.data, videoId);
+                cachedTOC = response.data;
+                renderTOC(cachedTOC, videoId);
+
             } else {
                 resultsContainer.innerHTML = "<p>Failed to load detected objects.</p>";
             }
@@ -245,7 +248,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
         const backBtn = document.createElement("button");
         backBtn.textContent = "Back to TOC";
-        backBtn.onclick = () => loadObjectTOC(videoId);
+        backBtn.onclick = () => renderTOC(cachedTOC, videoId);
         backBtn.style.marginTop = "10px";
         backBtn.style.cursor = "pointer";
         resultsContainer.appendChild(backBtn);
