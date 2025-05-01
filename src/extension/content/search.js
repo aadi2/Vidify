@@ -94,8 +94,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (!tabs || tabs.length === 0) {
                     return reject(new Error("No active tab found."));
                 }
-                const videoId = extractVideoId(tabs[0].url);
-                resolve(videoId);
+                resolve(tabs[0].url);
             });
         });
     }
