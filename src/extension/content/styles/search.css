@@ -1,5 +1,5 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Helvetica Neue', sans-serif;
     background: linear-gradient(to bottom, #ffde79, #4abef8); /* Yellow to Blue Gradient */
     text-align: center;
     margin: 0;
@@ -32,12 +32,15 @@ body {
     color: black;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s ease-in-out;
+    font-size: 15px;
+    transition: background-color 0.3s ease, transform 0.15s ease, box-shadow 0.3s ease;
 }
 
 #search-button:hover {
     background-color: #0066ff;
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
 }
 
 #status-message {
@@ -173,7 +176,7 @@ body {
 
 .result-item {
     padding: 10px;
-    border-bottom: 1px solid #8a8a8a; /* divider */
+    border-bottom: 1px solid #2c2a2a; /* divider */
     text-align: left;
 }
 

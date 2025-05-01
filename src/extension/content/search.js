@@ -97,7 +97,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function displayResultsInPopup(data, videoId) {
-        resultsContainer.innerHTML = `<h3>Results:</h3>`;
+        resultsContainer.innerHTML = `<h3 style='font-size: 1.3em; margin-bottom: 12px;'>Results:</h3>`;
 
         if (!data.results || data.results.length === 0) {
             resultsContainer.innerHTML += `<p>No results found.</p>`;
@@ -113,19 +113,27 @@ document.addEventListener("DOMContentLoaded", function () {
                 timestamps.forEach((ts) => {
                     const seconds = typeof ts === "string" ? parseTimestampToSeconds(ts) : ts;
 
-                    const item = document.createElement("div");
-                    item.className = "result-item";
-                    item.innerHTML = `<strong>${label}</strong> at `;
+                    const card = document.createElement("div");
+                    card.innerHTML = `<strong>${label}</strong> at ${seconds.toFixed(1)}s`;
+                    card.className = "timestamp-link";
+                    card.style.cursor = "pointer";
+                    card.style.borderRadius = "6px";
+                    card.style.padding = "10px";
+                    card.style.textAlign = "center";
+                    card.style.marginBottom = "4px";
+                    card.style.fontSize = "1.2em";
+                    card.style.backgroundColor = "#ffde79";
+                    card.style.transition = "transform 0.15s ease, background-color 0.2s ease";
 
-                    const timestampSpan = document.createElement("span");
-                    timestampSpan.textContent = `${seconds.toFixed(1)}s`;
-                    timestampSpan.className = "timestamp-link";
-                    timestampSpan.style.color = "#007bff";
-                    timestampSpan.style.cursor = "pointer";
-                    timestampSpan.style.textDecoration = "underline";
-                    timestampSpan.setAttribute("data-seconds", seconds);
-
-                    timestampSpan.addEventListener("click", () => {
+                    card.onmouseover = () => {
+                        card.style.transform = "scale(1.03)";
+                        card.style.backgroundColor = "#f0f0f0";
+                    };
+                    card.onmouseout = () => {
+                        card.style.transform = "scale(1)";
+                        card.style.backgroundColor = "#ffde79";
+                    };
+                    card.onclick = () => {
                         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                             chrome.scripting.executeScript({
                                 target: { tabId: tabs[0].id },
@@ -139,27 +147,33 @@ document.addEventListener("DOMContentLoaded", function () {
                                 args: [seconds],
                             });
                         });
-                    });
-
-                    item.appendChild(timestampSpan);
-                    resultsContainer.appendChild(item);
+                    };
+                    resultsContainer.appendChild(card);
                 });
             } else if (result.timestamp !== undefined) {
                 const seconds = typeof result.timestamp === "string" ? parseTimestampToSeconds(result.timestamp) : result.timestamp;
 
-                const item = document.createElement("div");
-                item.className = "result-item";
-                item.innerHTML = `<strong>${label}</strong> at `;
+                const card = document.createElement("div");
+                card.innerHTML = `<strong>${label}</strong> at ${seconds.toFixed(1)}s`;
+                card.className = "timestamp-link";
+                card.style.cursor = "pointer";
+                card.style.borderRadius = "6px";
+                card.style.padding = "10px";
+                card.style.textAlign = "center";
+                card.style.marginBottom = "4px";
+                card.style.fontSize = "1.2em";
+                card.style.backgroundColor = "#ffde79";
+                card.style.transition = "transform 0.15s ease, background-color 0.2s ease";
 
-                const timestampSpan = document.createElement("span");
-                timestampSpan.textContent = `${seconds.toFixed(1)}s`;
-                timestampSpan.className = "timestamp-link";
-                timestampSpan.style.color = "#007bff";
-                timestampSpan.style.cursor = "pointer";
-                timestampSpan.style.textDecoration = "underline";
-                timestampSpan.setAttribute("data-seconds", seconds);
-
-                timestampSpan.addEventListener("click", () => {
+                card.onmouseover = () => {
+                    card.style.transform = "scale(1.03)";
+                    card.style.backgroundColor = "#f0f0f0";
+                };
+                card.onmouseout = () => {
+                    card.style.transform = "scale(1)";
+                    card.style.backgroundColor = "#ffde79";
+                };
+                card.onclick = () => {
                     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                         chrome.scripting.executeScript({
                             target: { tabId: tabs[0].id },
@@ -173,10 +187,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             args: [seconds],
                         });
                     });
-                });
-
-                item.appendChild(timestampSpan);
-                resultsContainer.appendChild(item);
+                };
+                resultsContainer.appendChild(card);
             }
         });
     }
@@ -198,15 +210,29 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function renderTOC(tocData, videoId) {
-        resultsContainer.innerHTML = "<h3>Detected Objects:</h3>";
+        resultsContainer.innerHTML = "<h3 style='font-size: 1.3em; margin-bottom: 12px;'>Detected Objects:</h3>";
 
-        const list = document.createElement("ul");
+        const list = document.createElement("div");
         tocData.results.forEach((obj) => {
-            const listItem = document.createElement("li");
+            const listItem = document.createElement("div");
             listItem.textContent = obj.object;
             listItem.style.cursor = "pointer";
-            listItem.style.color = "#007bff";
-            listItem.style.textDecoration = "underline";
+            listItem.style.padding = "8px 12px";
+            listItem.style.marginBottom = "4px";
+            listItem.style.fontSize = "1.2em";
+            listItem.style.borderRadius = "6px";
+            listItem.style.backgroundColor = "#ffde79";
+            listItem.style.transition = "transform 0.15s ease, background-color 0.2s ease";
+
+            // Optional hover effect
+            listItem.onmouseover = () => {
+                listItem.style.transform = "scale(1.03)";
+                listItem.style.backgroundColor = "#f0f0f0";
+            };
+            listItem.onmouseout = () => {
+                listItem.style.transform = "scale(1)";
+                listItem.style.backgroundColor = "#ffde79";
+            };
 
             listItem.onclick = () => {
                 renderTimestamps(obj.object, obj.timestamps, videoId);
@@ -216,20 +242,36 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         resultsContainer.appendChild(list);
+
+        statusMessage.textContent = "";
     }
 
     function renderTimestamps(label, timestamps, videoId) {
-        resultsContainer.innerHTML = `<h3>Occurrences of "${label}":</h3>`;
+        resultsContainer.innerHTML = `<h3 style="font-size: 1.3em; margin-bottom: 12px;">Occurrences of "${label}":</h3>`;
 
         timestamps.forEach((timestamp) => {
             const seconds = typeof timestamp === "string" ? parseTimestampToSeconds(timestamp) : timestamp;
-            const link = document.createElement("p");
-            link.textContent = `${seconds.toFixed(1)}s`;
-            link.className = "timestamp-link";
-            link.style.cursor = "pointer";
-            link.style.textDecoration = "underline";
-            link.style.color = "#007bff";
-            link.onclick = () => {
+            const card = document.createElement("div");
+            card.textContent = `${seconds.toFixed(1)}s`;
+            card.className = "timestamp-link";
+            card.style.cursor = "pointer";
+            card.style.borderRadius = "6px";
+            card.style.padding = "10px";
+            card.style.textAlign = "center";
+            card.style.marginBottom = "4px"
+            card.style.fontSize = "1.2em";
+            card.style.backgroundColor = "#ffde79";
+            card.style.transition = "transform 0.15s ease, background-color 0.2s ease";
+
+            card.onmouseover = () => {
+                card.style.transform = "scale(1.03)";
+                card.style.backgroundColor = "#f0f0f0";
+            };
+            card.onmouseout = () => {
+                card.style.transform = "scale(1)";
+                card.style.backgroundColor = "#ffde79";
+            };
+            card.onclick = () => {
                 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                     chrome.scripting.executeScript({
                         target: { tabId: tabs[0].id },
@@ -245,14 +287,34 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
             };
 
-            resultsContainer.appendChild(link);
+            resultsContainer.appendChild(card);
         });
 
         const backBtn = document.createElement("button");
         backBtn.textContent = "Back to TOC";
         backBtn.onclick = () => renderTOC(cachedTOC, videoId);
-        backBtn.style.marginTop = "10px";
+
+        backBtn.style.display = "block";
+        backBtn.style.width = "100%";
+        backBtn.style.boxSizing = "border-box";
+        backBtn.style.marginTop = "16px";
+        backBtn.style.padding = "10px";
+        backBtn.style.border = "none";
+        backBtn.style.borderRadius = "6px";
+        backBtn.style.color = "#fff";
+        backBtn.style.fontSize = "1.1em";
         backBtn.style.cursor = "pointer";
+        backBtn.style.backgroundColor = "transparent"
+        backBtn.style.transition = "transform 0.15s ease, background-color 0.2s ease";
+
+        backBtn.onmouseover = () => {
+            backBtn.style.transform = "scale(1.03)";
+            backBtn.style.backgroundColor = "#0066ff";
+        };
+        backBtn.onmouseout = () => {
+            backBtn.style.transform = "scale(1.03)";
+            backBtn.style.backgroundColor = "transparent";
+        };
         resultsContainer.appendChild(backBtn);
     }
 });
