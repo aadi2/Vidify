@@ -9,6 +9,10 @@ import whisper
 
 COOKIES_FILE = "cookies.txt"
 
+# API security - fixed API key for extension authentication
+# In production, use an environment variable for this value
+API_KEY = "vid-xyz-123456789-vidify-secure-key"
+
 print("Loading Whisper model")
 WHISPER_MODEL = whisper.load_model("tiny")
 WHISPER_MODEL.to("cpu")
@@ -34,6 +38,17 @@ def is_valid_youtube_url(url):
     return bool(re.match(YOUTUBE_URL_PATTERN, url))
 
 
+def validate_api_key():
+    """
+    Validates the API key provided in the request header.
+
+    Returns:
+        bool: True if the API key is valid, False otherwise
+    """
+    api_key = request.headers.get("X-API-Key")
+    return api_key == API_KEY
+
+
 def create_app():
     app = Flask(__name__)
     CORS(app)
@@ -47,6 +62,12 @@ def create_app():
     @app.route("/object_search", methods=["GET"])
     def object_search():
         try:
+            # Validate API key
+            if not validate_api_key():
+                return jsonify(
+                    {"message": "Unauthorized. Invalid or missing API key."}
+                ), 401
+
             yt_url = request.args.get("yt_url")
 
             # Validate the YouTube URL
@@ -108,6 +129,12 @@ def create_app():
     @app.route("/transcript_search", methods=["GET"])
     def transcript_search():
         try:
+            # Validate API key
+            if not validate_api_key():
+                return jsonify(
+                    {"message": "Unauthorized. Invalid or missing API key."}
+                ), 401
+
             yt_url = request.args.get("yt_url")
 
             # Validate the YouTube URL

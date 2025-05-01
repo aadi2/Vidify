@@ -1,10 +1,12 @@
 const API_URL = "https://vidify-378225991600.us-central1.run.app"
+const API_KEY = "vid-xyz-123456789-vidify-secure-key" // This should match the key in the backend
 
 // Automatically trigger authentication when the extension is installed or started.
 chrome.runtime.onInstalled.addListener(() => {
     console.log("Vidify extension installed and ready!");
     //ensureAuthenticated();
-  });
+  
+});
   
   chrome.runtime.onStartup.addListener(() => {
     console.log("Vidify extension started.");
@@ -130,6 +132,7 @@ async function handleTranscriptSearch(videoId, searchTerm) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-Key': API_KEY
         },
         mode: 'cors',
       })
@@ -180,6 +183,7 @@ async function handleObjectSearch(videoId, searchTerm) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-Key': API_KEY
         },
         mode: 'cors',
       })
@@ -259,7 +263,8 @@ async function fetchFromSPI(endpoint, payload, sendResponse) {
         const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-API-Key": API_KEY
             },
             body: JSON.stringify(requestBody)
         });
