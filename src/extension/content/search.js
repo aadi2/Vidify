@@ -24,9 +24,22 @@ document.addEventListener("DOMContentLoaded", function() {
         document.body.classList.toggle("dark-mode", darkModeToggle.checked);
     });
 
-    searchModeToggle.addEventListener("change", function() {
+    searchModeToggle.addEventListener("change", async function() {
         modeLabel.textContent = searchModeToggle.checked ? "Object Detection" : "Transcript Search";
+        
+        resultsContainer.innerHTML = "";
+        const query = searchInput.value.trim();
+    
+        // Only auto-load TOC if no search input
+        if (searchModeToggle.checked && query === "") {
+            statusMessage.textContent = "Loading detected objects...";
+            const videoId = await getActiveTabUrl();
+            loadObjectTOC(videoId);
+        } else {
+            statusMessage.textContent = "Welcome to Vidify! Please search using a keyword...";
+        }
     });
+    
 
     searchButton.addEventListener("click", async function() {
         const query = searchInput.value.trim();
@@ -88,6 +101,13 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
+// Automatically load TOC if in Object Detection Mode and no search term is entered
+    if (searchModeToggle.checked) {
+        getActiveTabUrl().then(videoId => {
+            loadObjectTOC(videoId);
+        });
+    }
+    
     async function getActiveTabUrl() {
         return new Promise((resolve, reject) => {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -157,7 +177,80 @@ document.addEventListener("DOMContentLoaded", function() {
             resultsContainer.appendChild(item);
         });
     }
-
+    function loadObjectTOC(videoId) {
+        if (!videoId) return;
+    
+        chrome.runtime.sendMessage({
+            action: "tableOfContents",
+            videoId: videoId
+        }, (response) => {
+            if (response && response.status === "success" && response.data) {
+                renderTOC(response.data, videoId);
+            } else {
+                resultsContainer.innerHTML = "<p>Failed to load detected objects.</p>";
+            }
+        });
+    }
+    
+    function renderTOC(tocData, videoId) {
+        resultsContainer.innerHTML = "<h3>Detected Objects:</h3>";
+    
+        const list = document.createElement("ul");
+        tocData.results.forEach(obj => {
+            const listItem = document.createElement("li");
+            listItem.textContent = obj.object;
+            listItem.style.cursor = "pointer";
+            listItem.style.color = "#007bff";
+            listItem.style.textDecoration = "underline";
+    
+            listItem.onclick = () => {
+                renderTimestamps(obj.object, obj.timestamps, videoId);
+            };
+    
+            list.appendChild(listItem);
+        });
+    
+        resultsContainer.appendChild(list);
+    }
+    
+    function renderTimestamps(label, timestamps, videoId) {
+        resultsContainer.innerHTML = `<h3>Occurrences of "${label}":</h3>`;
+    
+        timestamps.forEach(timestamp => {
+            const seconds = typeof timestamp === "string" ? parseTimestampToSeconds(timestamp) : timestamp;        
+            const link = document.createElement("p");
+            link.textContent = `${timestamp}s`;
+            link.className = "timestamp-link";
+            link.style.cursor = "pointer";
+            link.style.textDecoration = "underline";
+            link.style.color = "#007bff";
+            link.onclick = () => {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    chrome.scripting.executeScript({
+                        target: { tabId: tabs[0].id },
+                        func: (seekTime) => {
+                            const video = document.querySelector("video");
+                            if (video) {
+                                video.currentTime = seekTime;
+                                video.play();
+                            }
+                        },
+                        args: [seconds]
+                    });
+                });
+            };
+    
+            resultsContainer.appendChild(link);
+        });
+    
+        const backBtn = document.createElement("button");
+        backBtn.textContent = "Back to TOC";
+        backBtn.onclick = () => loadObjectTOC(videoId);
+        backBtn.style.marginTop = "10px";
+        backBtn.style.cursor = "pointer";
+        resultsContainer.appendChild(backBtn);
+    }
+    
 });
 
 function extractVideoId(url) {
